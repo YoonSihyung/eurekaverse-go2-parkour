@@ -1,0 +1,13 @@
+numpy
+scipy
+matplotlib
+openai
+opencv-python
+pydelatin
+pyfqmr
+hydra-core
+wandb
+tenacity
+tqdm
+ipdb
+nvidia-ml-py3
