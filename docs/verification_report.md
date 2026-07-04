@@ -126,3 +126,28 @@ config 플래그 4종 모두 원본값(True) 복원.
 | 14 | **커맨드 런타임 오버라이드**: 포크 helpers.py가 terrain_type별로 lin_vel_x를 [0,2.0](simple)/[0.3,1.2](else)로 강제 — 원본에는 없는 로직 | 걷기 사전학습에 0~2m/s 혼합 커맨드(정지 포함+전력질주) 부과 | 오버라이드 제거 → 원본 활성값 [0.3,0.8] 사용 |
 
 교훈: 포크의 "학습이 되는 것처럼 보였던" 이전 실행들(보상 상승, 에피소드 생존)은 전부 이 상태에서의 결과였음 — 골 도달 지표를 통한 검증이 필수.
+
+## 9. 전수 감사 (3영역 병렬, 2026-07-05) — 편차 9건 추가 교정
+
+### 즉시 교정 (커밋 9840043)
+| # | 편차 | 심각도 | 교정 |
+|---|---|---|---|
+| 15 | `_reset_idx`가 리셋 env의 reset_term/reset_time_out을 **둘 다 1로 덮어씀** → PPO가 넘어짐도 타임아웃으로 부트스트랩 (넘어짐 학습 신호 약화) | HIGH | 덮어쓰기 제거 (원본은 reset_buf만 설정) |
+| 16 | 리셋 시 관절 초기각 랜덤화(U(0,0.9) rad) 누락 → 초기상태 다양성 상실 | HIGH | 원본 복원 |
+| 17 | `_reset_root_states`가 슬라이스된 텐서를 env_ids로 재인덱싱 (부분 리셋 시 잠재 크래시) | HIGH | 로컬 인덱싱으로 교정 |
+| 18 | Go1 self-collision 활성 (원본은 비활성) | HIGH | False 복원 |
+| 19 | train/evaluate가 러너 설정을 `name="go1"` 하드코딩 | HIGH | `args.task` 사용 |
+| 20 | 평가 시 마찰 랜덤화 OFF (원본 ON) → 벤치마크 물리 조건 상이 | HIGH | ON 복원 |
+| 21 | 평가 env 수를 그리드 크기로 강제 (원본은 max(설정, 그리드)) | HIGH | 원본 의미론 복원 (+view.sh에 --num_envs 16 명시) |
+
+### 문서화만 (기능적 영향 없음/의도적)
+- action_history_buf 갱신 시점·클리핑 차이 (delay 비활성 시 무영향), motor_strength가 Go1 ActuatorNet에는 미적용(Go2 IdealPD에는 적용 — 의도), num_goals=8 강제 제거(설정값 동일), roughness step이 vertical_scale에 결합(기본값 동일), randint 가드(GPT 지형 크래시 방지 — 유용해 유지), 관절 리셋 랜덤화 원본 docstring과 코드 불일치(코드 기준 채택)
+
+### rsl_rl — 청정 판정
+2파일만 상이(인터페이스 적응), 학습 수식·하이퍼파라미터·체크포인트·계약 문자열 전부 원본 동일 검증. depth 경로에 `NotImplementedError` 가드 존재 → **M6 이식 항목**.
+
+### 후속 작업 항목으로 이관
+- **M6 (증류)**: helpers의 camera 분기 복원, `--use_camera/--action_delay` CLI 복원, action delay 런타임 로직 이식, rsl_rl depth 가드 제거, evaluate depth 경로 이식
+- **M7 (배포)**: `save_jit.py` 이식 (포팅본에 없음)
+- **루프 연결**: python_prefix/export_vars 하드코딩 교체, iteration-0 체크포인트명 `walk_pretrain` 복원, config 논문값 정렬(iterations 5/train 2000), terrain_* 블록을 고증 백엔드값(0.05, 10×40)으로, gpt-5.4 pricing 추가(fan-out 구조는 포크 개조가 이미 gpt-5.4 호환), all-training 청킹 복원 검토
+- render.py/웹뷰어 미이식 (루프 render_images=False로 회피)
