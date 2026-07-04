@@ -102,10 +102,9 @@ def update_cfg_from_args(env_cfg, cfg_train, args):
         else:
             env_cfg.video = False
 
-        if args.terrain_type == "simple": # flat
-            env_cfg.commands.ranges.lin_vel_x = [0.0, 2.0]
-        else: # parkour
-            env_cfg.commands.ranges.lin_vel_x = [0.3, 1.2]
+        # NOTE (fidelity): the porting base overrode lin_vel_x per terrain_type here
+        # (simple -> [0.0, 2.0], else -> [0.3, 1.2]). The original has no such
+        # override; it always uses the config value [0.3, 0.8]. Removed.
 
         # terrain-related args
         if args.terrain_length is not None:

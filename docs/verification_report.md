@@ -115,3 +115,14 @@ config 플래그 4종 모두 원본값(True) 복원.
 - terrain_gpt.py `fix_terrain`/`check_terrain_feasibility` 원본 대비 (루프 연결 전)
 - evaluate.py 통계 산출 경로 (STATISTICS 블록 생성부)
 - rsl_rl 2파일 diff (estimator.py, on_policy_runner.py — 포크 어댑테이션 검토)
+
+## 8. 3차 감사 — "못 걷는" 근본 원인 (2026-07-05)
+
+프로브 매트릭스(R1 go1 / R2 DR-off / R3 collision-off 전부 골 0)로 Go2·DR·collision을 배제한 뒤 계측 진단으로 확정:
+
+| # | 편차/버그 | 증상 | 교정 |
+|---|---|---|---|
+| 13 | **쿼터니언 규약**: Isaac Lab 3.0이 (w,x,y,z)→**(x,y,z,w)**로 변경. 포팅 베이스의 `euler_from_quaternion`은 w-first 가정 | roll/pitch/yaw 전부 쓰레기 → delta_yaw(골 방향 관측)·IMU 관측·종료 판정 오염 → **목적 있는 보행 학습 불가능** (기어다니는 국소최적) | 인덱싱 교정 (`legged_robot.py:71`), 계측 재검증 완료 (yaw 0.02, delta_yaw=기하학값 일치). 다른 쿼터니언 소비처는 전부 3.0 자체 math 함수라 일관성 확인 |
+| 14 | **커맨드 런타임 오버라이드**: 포크 helpers.py가 terrain_type별로 lin_vel_x를 [0,2.0](simple)/[0.3,1.2](else)로 강제 — 원본에는 없는 로직 | 걷기 사전학습에 0~2m/s 혼합 커맨드(정지 포함+전력질주) 부과 | 오버라이드 제거 → 원본 활성값 [0.3,0.8] 사용 |
+
+교훈: 포크의 "학습이 되는 것처럼 보였던" 이전 실행들(보상 상승, 에피소드 생존)은 전부 이 상태에서의 결과였음 — 골 도달 지표를 통한 검증이 필수.

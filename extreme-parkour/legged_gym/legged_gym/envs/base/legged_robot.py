@@ -68,7 +68,10 @@ def euler_from_quaternion(quat_angle):
     pitch is rotation around y in radians (counterclockwise)
     yaw is rotation around z in radians (counterclockwise)
     """
-    w = quat_angle[:,0]; x = quat_angle[:,1]; y = quat_angle[:,2]; z = quat_angle[:,3]
+    # Isaac Lab 3.0 quaternion convention is (x, y, z, w) — w is LAST.
+    # (2.x was (w, x, y, z); the porting base assumed w-first, which scrambled
+    # roll/pitch/yaw: garbage delta_yaw/imu observations and terminations.)
+    x = quat_angle[:,0]; y = quat_angle[:,1]; z = quat_angle[:,2]; w = quat_angle[:,3]
     t0 = +2.0 * (w * x + y * z)
     t1 = +1.0 - 2.0 * (x * x + y * y)
     roll_x = torch.atan2(t0, t1)
