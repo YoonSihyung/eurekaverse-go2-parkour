@@ -447,8 +447,9 @@ class LeggedRobot(DirectRLEnv):
         self._last_torques[env_ids] = 0.
         self.feet_air_time[env_ids] = 0.
         self.reset_buf[env_ids] = 1
-        self.reset_term[env_ids] = 1
-        self.reset_time_out[env_ids] = 1
+        # NOTE: do NOT overwrite reset_term/reset_time_out here. The porting base set
+        # both to 1 for every reset env, which made PPO bootstrap the value on fallen
+        # robots (every termination looked like a timeout). Original only sets reset_buf.
         self.obs_history_buf[env_ids, :, :] = 0.
         self.action_history_buf[env_ids, :, :] = 0.
         self.cur_goal_idx[env_ids] = 0
@@ -657,8 +658,11 @@ class LeggedRobot(DirectRLEnv):
         Args:
             env_ids (List[int]): Environemnt ids
         """
-        new_joint_pos = self._robot.data.default_joint_pos[env_ids].to(self.device)
-        new_joint_vel = self._robot.data.default_joint_vel[env_ids].to(self.device)
+        # Original: joint positions perturbed by U(0, 0.9) rad on every reset
+        # (initial-state diversity; the porting base had dropped this).
+        new_joint_pos = self._robot.data.default_joint_pos[env_ids].to(self.device) \
+            + torch_rand_float(0., 0.9, (len(env_ids), self.num_dof), device=self.device)
+        new_joint_vel = self._robot.data.default_joint_vel[env_ids].to(self.device) * 0.
 
         env_ids_int32 = env_ids.to(dtype=torch.int32)
         self._robot.write_joint_state_to_sim(new_joint_pos, new_joint_vel, None, env_ids)
@@ -674,18 +678,20 @@ class LeggedRobot(DirectRLEnv):
         default_root_state = self._robot.data.default_root_state[env_ids].clone()
         default_root_state[:, :3] += self.scene._terrain.env_origins[env_ids] # could also just do scene.env_origins
         if self.custom_origins:
+            # default_root_state is already sliced by env_ids — index locally (the porting
+            # base re-indexed with env_ids here, a latent IndexError on partial resets).
             if self.cfg.env.randomize_start_pos:
-                default_root_state[env_ids, :2] += torch_rand_float(-0.3, 0.3, (len(env_ids), 2), device=self.device) # xy position within 1m of the center
+                default_root_state[:, :2] += torch_rand_float(-0.3, 0.3, (len(env_ids), 2), device=self.device) # xy position within 1m of the center
             if self.cfg.env.randomize_start_yaw:
                 rand_yaw = self.cfg.env.rand_yaw_range*torch_rand_float(-1, 1, (len(env_ids), 1), device=self.device).squeeze(1)
                 if self.cfg.env.randomize_start_pitch:
                     rand_pitch = self.cfg.env.rand_pitch_range*torch_rand_float(-1, 1, (len(env_ids), 1), device=self.device).squeeze(1)
                 else:
                     rand_pitch = torch.zeros(len(env_ids), device=self.device)
-                quat = quat_from_euler_xyz(0*rand_yaw, rand_pitch, rand_yaw) 
-                default_root_state[env_ids, 3:7] = quat[:, :]  
+                quat = quat_from_euler_xyz(0*rand_yaw, rand_pitch, rand_yaw)
+                default_root_state[:, 3:7] = quat[:, :]
             if self.cfg.env.randomize_start_y:
-                default_root_state[env_ids, 1] += self.cfg.env.rand_y_range * torch_rand_float(-1, 1, (len(env_ids), 1), device=self.device).squeeze(1)
+                default_root_state[:, 1] += self.cfg.env.rand_y_range * torch_rand_float(-1, 1, (len(env_ids), 1), device=self.device).squeeze(1)
 
         env_ids_int32 = env_ids.to(dtype=torch.int32)
         self._robot.write_root_pose_to_sim(

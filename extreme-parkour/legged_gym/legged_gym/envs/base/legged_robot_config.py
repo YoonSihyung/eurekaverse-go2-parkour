@@ -38,7 +38,8 @@ UNITREE_GO1_CFG = ArticulationCfg(
             max_angular_velocity=1000.0,
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-            enabled_self_collisions=True, solver_position_iteration_count=4, solver_velocity_iteration_count=0
+            # original go1_config: self_collisions = 1 (1 to DISABLE)
+            enabled_self_collisions=False, solver_position_iteration_count=4, solver_velocity_iteration_count=0
         ),
     ),
     init_state=ArticulationCfg.InitialStateCfg(

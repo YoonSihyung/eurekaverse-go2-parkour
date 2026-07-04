@@ -185,23 +185,21 @@ def evaluate(args):
         env_cfg = task_registry.get_saved_cfgs(load_dir=load_dir)
         _, train_cfg = task_registry.get_cfgs(name=args.task)
     
-    # If number of environments is too small, increase it to fill up each grid cell (relevant for distillation)
-    # env_cfg.scene.num_envs = max(env_cfg.scene.num_envs, env_cfg.terrain.num_rows * env_cfg.terrain.num_cols)
-
-    # single environment for each grid cell
-    if args.num_rows is not None:
-        env_cfg.scene.num_envs = args.num_rows * args.num_cols
+    # Original semantics: at least one env per grid cell, but keep a larger configured
+    # count (multiple robots per cell reduce per-cell stat variance; matters for distillation).
+    grid_cells = (args.num_rows * args.num_cols) if args.num_rows is not None \
+        else (env_cfg.terrain.num_rows * env_cfg.terrain.num_cols)
+    if args.num_envs is not None:
+        env_cfg.scene.num_envs = max(args.num_envs, grid_cells)
     else:
-        env_cfg.scene.num_envs = env_cfg.terrain.num_rows * env_cfg.terrain.num_cols
-    assert args.num_envs is None, "Currently hard-coding num_envs to match number of terrain cells"
+        env_cfg.scene.num_envs = max(env_cfg.scene.num_envs, grid_cells)
     env_cfg.depth.camera_num_envs = env_cfg.scene.num_envs
     
     # Don't resample commands during an episode
     env_cfg.commands.resampling_time = 20
     
-    # Disable some domain randomization (used to keep friction on)
-    # env_cfg.domain_rand.randomize_friction = True
-    env_cfg.domain_rand.randomize_friction = False
+    # Disable some domain randomization (original keeps friction ON during eval)
+    env_cfg.domain_rand.randomize_friction = True
     env_cfg.domain_rand.push_robots = False
     env_cfg.domain_rand.randomize_base_mass = False
     env_cfg.domain_rand.randomize_base_com = False
@@ -309,7 +307,7 @@ def evaluate(args):
         # parkour_actor.load(load_dir)
         checkpoint = "jit"
     else:
-        ppo_runner, train_cfg, _, loaded_dir, checkpoint = task_registry.make_alg_runner(env=env, args=args, name="go1", train_cfg=train_cfg, log_root=load_dir)
+        ppo_runner, train_cfg, _, loaded_dir, checkpoint = task_registry.make_alg_runner(env=env, args=args, name=args.task, train_cfg=train_cfg, log_root=load_dir)
         assert load_dir == loaded_dir, f"Config loading directory {load_dir} is different from the runner loading directory {loaded_dir}!"
         if env_cfg.depth.use_camera:
             raise NotImplementedError("Depth actor not ported to Lab")

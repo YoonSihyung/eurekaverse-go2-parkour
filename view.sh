@@ -26,4 +26,4 @@ conda activate eureka_lab6
 cd "$(dirname "$0")/extreme-parkour/legged_gym/legged_gym"
 python -u scripts/evaluate.py --task go2 --exptid "$EXPTID" \
     --max_steps 5000 --metric_granularity type --terrain_type simple \
-    --num_rows 4 --num_cols 4 --viz kit "$@"
+    --num_rows 4 --num_cols 4 --num_envs 16 --viz kit "$@"

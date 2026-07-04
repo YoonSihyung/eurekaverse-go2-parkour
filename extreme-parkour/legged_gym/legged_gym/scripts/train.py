@@ -93,7 +93,7 @@ def train(args):
     )
 
     env, env_cfg = task_registry.make_env(args=args, name=args.task, render_mode=None)
-    ppo_runner, train_cfg, log_dir, _, _ = task_registry.make_alg_runner(env=env, args=args, name="go1")
+    ppo_runner, train_cfg, log_dir, _, _ = task_registry.make_alg_runner(env=env, args=args, name=args.task)
     
     # Save config and important source files
     legged_robot_file = LEGGED_GYM_ROOT_DIR + "/legged_gym/envs/base/legged_robot.py"
