@@ -1043,7 +1043,7 @@ def set_terrain_staircase_spiral(length, width, field_resolution, difficulty):
         goal_x, goal_y = np.cos((theta_min + theta_max) / 2) * radius / 2 * 1.5 * radius_reduction, np.sin((theta_min + theta_max) / 2) * radius / 2 * 1.5  * radius_reduction
         goals[goal_i] = [goal_x + mid_x + spawn_length * 2, goal_y + mid_y]
         
-        donut = np.concatenate((np.zeros((spawn_length * 2, height_field.shape[1])), next_circle_segment, np.zeros((height_field.shape[0] - spawn_length * 2 - height_field.shape[1], height_field.shape[1])))).astype(np.bool8)
+        donut = np.concatenate((np.zeros((spawn_length * 2, height_field.shape[1])), next_circle_segment, np.zeros((height_field.shape[0] - spawn_length * 2 - height_field.shape[1], height_field.shape[1])))).astype(np.bool_)
         height_field[donut] = height
 
     

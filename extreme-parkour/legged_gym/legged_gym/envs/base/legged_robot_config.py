@@ -496,6 +496,10 @@ class LeggedRobotCfg(DirectRLEnvCfg):
             # moved to actor config
             # default_buffer_size_multiplier is no longer needed
             gpu_max_rigid_contact_count=2**24,
+            # Benchmark terrains (stairs/boxes/poles x 6144 envs) need ~1M contact patches;
+            # the 3.0 default (5*2**15=163k) overflows and silently drops contacts.
+            # The original Isaac Gym scaled buffers via default_buffer_size_multiplier=5.
+            gpu_max_rigid_patch_count=2**21,
             # num_subscenes is no longer needed
             # contact_collection is no longer needed
         ),

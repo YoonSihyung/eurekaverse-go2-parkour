@@ -207,6 +207,11 @@ def evaluate(args):
     # Disable the curriculum to assign robots evenly across terrain types and difficulties
     env_cfg.terrain.curriculum = False
 
+    # The pickled training config may predate the patch-buffer fix; benchmark terrains
+    # need ~1M contact patches (PhysX "Patch buffer overflow" drops contacts otherwise).
+    env_cfg.sim.physics.gpu_max_rigid_patch_count = max(
+        env_cfg.sim.physics.gpu_max_rigid_patch_count, 2**21)
+
     # If showing window, allow user to control command velocity to 0
     # This should not be used for headless evaluation since it will affect the results
     if not args.headless:
