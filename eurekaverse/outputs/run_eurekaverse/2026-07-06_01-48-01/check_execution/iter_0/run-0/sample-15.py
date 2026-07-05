@@ -1,0 +1,96 @@
+import numpy as np
+import random
+
+def set_terrain(length, width, field_resolution, difficulty):
+    """A straight-line course with repeated low balance beams over pits to test precision stepping and foot placement."""
+
+    def m_to_idx(m):
+        """Converts meters to quantized indices."""
+        return np.round(m / field_resolution).astype(np.int16) if not (isinstance(m, list) or isinstance(m, tuple)) else [round(i / field_resolution) for i in m]
+
+    # Terrain grid
+    height_field = np.zeros((m_to_idx(length), m_to_idx(width)))
+    goals = np.zeros((8, 2))
+
+    # Basic dimensions in indices
+    L = height_field.shape[0]
+    W = height_field.shape[1]
+    mid_y = W // 2
+
+    # Spawn-safe flat region
+    spawn_len = m_to_idx(2.0)
+    height_field[:spawn_len, :] = 0.0
+
+    # Course parameters: repeated narrow beams spanning pits
+    # Difficulty increases beam narrowness, beam height, and pit length
+    beam_length_m = 1.6 - 0.25 * difficulty
+    beam_length = max(m_to_idx(beam_length_m), m_to_idx(0.9))  # keep feasible
+    beam_width_m = 1.2 - 0.45 * difficulty
+    beam_width = max(m_to_idx(beam_width_m), m_to_idx(0.45))    # rare narrow obstacle allowance
+    beam_height = 0.05 + 0.18 * difficulty
+
+    pit_depth = -(0.55 + 0.35 * difficulty)
+    pit_length_m = 0.55 + 0.55 * difficulty
+    pit_length = max(m_to_idx(pit_length_m), m_to_idx(0.4))
+
+    # Small lateral drift to require tiny corrective turns but keep course mostly straight
+    max_offset_m = 0.35
+    max_offset = m_to_idx(max_offset_m)
+
+    # Helper for placing a beam and its surrounding pit
+    def add_beam(x_start, y_center, beam_len, beam_w, h):
+        half_w = beam_w // 2
+        y1 = max(0, y_center - half_w)
+        y2 = min(W, y_center + half_w)
+        x1 = max(0, x_start)
+        x2 = min(L, x_start + beam_len)
+        height_field[x1:x2, y1:y2] = h
+
+    # Fill the area after spawn with pits first; beams will overwrite with positive height
+    height_field[spawn_len:, :] = pit_depth
+
+    # Place the first goal near the spawn, centered
+    goals[0] = [spawn_len - m_to_idx(0.5), mid_y]
+
+    cur_x = spawn_len + m_to_idx(0.2)
+    num_beams = 7  # 7 transitions and 8 goals total
+
+    # Deterministic but varied lateral offsets
+    offsets = np.array([0, 1, -1, 1, -1, 0, 1])
+    offsets = offsets * max(1, max_offset // 2)
+
+    for i in range(num_beams):
+        # Keep beam within bounds
+        y_center = int(np.clip(mid_y + offsets[i], beam_width // 2, W - beam_width // 2 - 1))
+
+        # Add beam
+        add_beam(cur_x, y_center, beam_length, beam_width, beam_height)
+
+        # Goal at the center of the beam
+        goals[i + 1] = [cur_x + beam_length / 2, y_center]
+
+        # Leave a pit/gap before the next beam
+        cur_x += beam_length + pit_length
+
+        # Stop if we are too close to the end
+        if cur_x + beam_length >= L:
+            break
+
+    # Ensure the final section is flat ground so the last landing is possible
+    tail_start = min(L - 1, int(cur_x + beam_length // 2))
+    if tail_start < L:
+        height_field[tail_start:, :] = 0.0
+
+    # If fewer than 8 goals were filled due to short terrain, pad remaining goals forward on flat ground
+    last_goal_x = goals[max(0, np.count_nonzero(goals[:, 0]) - 1), 0] if np.count_nonzero(goals[:, 0]) > 0 else spawn_len
+    last_goal_y = mid_y
+    for j in range(8):
+        if goals[j, 0] == 0 and goals[j, 1] == 0:
+            last_goal_x = min(L - m_to_idx(0.5), last_goal_x + m_to_idx(1.0))
+            goals[j] = [last_goal_x, last_goal_y]
+
+    # Make sure all goals are within bounds
+    goals[:, 0] = np.clip(goals[:, 0], 0, L - 1)
+    goals[:, 1] = np.clip(goals[:, 1], 0, W - 1)
+
+    return height_field, goals

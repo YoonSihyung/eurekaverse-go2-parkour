@@ -1,0 +1,95 @@
+import numpy as np
+import random
+
+def set_terrain(length, width, field_resolution, difficulty):
+    """A straight-line sequence of raised stepping pads with alternating lateral offsets to test precise jumping and body control."""
+
+    def m_to_idx(m):
+        """Converts meters to quantized indices."""
+        return np.round(m / field_resolution).astype(np.int16) if not (isinstance(m, list) or isinstance(m, tuple)) else [round(i / field_resolution) for i in m]
+
+    # Terrain size in grid indices
+    L = m_to_idx(length)
+    W = m_to_idx(width)
+
+    height_field = np.zeros((L, W))
+    goals = np.zeros((8, 2))
+
+    # -------------------------------------------------------------------------
+    # Course design:
+    # - Spawn area is flat for 2 m.
+    # - Then a repeating sequence of narrow raised pads separated by pits.
+    # - Pads alternate slightly left/right of center so the robot must adjust
+    #   its line while still traveling forward.
+    # - Pad height and gap size increase with difficulty.
+    # - The course remains a single skill focus: stepping/jumping between pads.
+    # -------------------------------------------------------------------------
+
+    mid_y = W // 2
+
+    # Spawn zone: keep flat and safe
+    spawn_len = m_to_idx(2.0)
+    height_field[:spawn_len, :] = 0.0
+
+    # Parameters that scale with difficulty
+    pad_length_m = 0.75 - 0.15 * difficulty
+    pad_length = max(m_to_idx(0.45), m_to_idx(pad_length_m))
+
+    pad_width_m = 1.2 - 0.15 * difficulty
+    pad_width = max(m_to_idx(1.0), m_to_idx(pad_width_m))
+
+    pad_height = 0.08 + 0.18 * difficulty
+    gap_length_m = 0.45 + 0.65 * difficulty
+    gap_length = max(m_to_idx(0.4), m_to_idx(gap_length_m))
+
+    # Small lateral offsets to force straight-line correction between goals
+    offset_choices_m = [-0.45, -0.25, 0.0, 0.25, 0.45]
+    offset_choices_idx = [m_to_idx(v) for v in offset_choices_m]
+
+    # Keep the path within bounds
+    pad_half_w = pad_width // 2
+    pad_half_l = pad_length // 2
+
+    # Build 7 pads after spawn so we can place 8 goals total including spawn/finish
+    cur_x = spawn_len + m_to_idx(0.5)
+
+    # Goal 0 near the end of spawn zone
+    goals[0] = [spawn_len - m_to_idx(0.4), mid_y]
+
+    # Fill the rest with repeating pads
+    for i in range(7):
+        # Alternate lateral placement for variety while staying consistent
+        offset = offset_choices_idx[(i + int(difficulty * 4)) % len(offset_choices_idx)]
+        pad_center_y = int(np.clip(mid_y + offset, pad_half_w, W - pad_half_w - 1))
+
+        # Ensure pad stays within the terrain length
+        if cur_x + pad_length >= L:
+            cur_x = max(spawn_len + m_to_idx(0.5), L - pad_length - m_to_idx(1.0))
+
+        x1 = int(cur_x)
+        x2 = int(min(L, cur_x + pad_length))
+        y1 = int(max(0, pad_center_y - pad_half_w))
+        y2 = int(min(W, pad_center_y + pad_half_w))
+
+        # Raised platform
+        height_field[x1:x2, y1:y2] = pad_height
+
+        # Put goal near the center of the current pad
+        goals[i + 1] = [x1 + (x2 - x1) / 2.0, pad_center_y]
+
+        # Leave a pit after the pad to force a step/jump
+        pit_x1 = x2
+        pit_x2 = int(min(L, pit_x1 + gap_length))
+        height_field[pit_x1:pit_x2, :] = -0.55 - 0.15 * difficulty
+
+        # Advance to next pad
+        cur_x = pit_x2 + m_to_idx(0.35)
+
+    # Make sure there is a flat landing/finish area after the final pad
+    finish_x = int(min(L - 1, cur_x + m_to_idx(0.5)))
+    height_field[finish_x:, :] = 0.0
+
+    # Final goal on the flat end zone
+    goals[-1] = [min(L - 1, finish_x + m_to_idx(0.6)), mid_y]
+
+    return height_field, goals

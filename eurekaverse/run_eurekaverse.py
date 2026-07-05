@@ -213,7 +213,8 @@ def parallel_run(cfg, it, parallel_run_id, only_parallel_run:bool=False):
             eval_all_training_log_files.append(eval_all_training_log_file)
     else:
         eval_all_training_log_files = [eval_post_training_log_file]
-        logging.info(f"> Skipping {eval_script.name} subprocess (all-training_{i}) for parallel run {parallel_run_id} (it's the only run, right?)...")
+        # (fork bug fixed: the skip-log referenced the loop variable `i` which doesn't exist here)
+        logging.info(f"> Skipping {eval_script.name} subprocess (all-training) for parallel run {parallel_run_id} (single parallel run)...")
 
     # Start evaluation (testing terrain) process
     logging.info(f"> Starting {eval_script.name} subprocess (testing) for parallel run {parallel_run_id}...")

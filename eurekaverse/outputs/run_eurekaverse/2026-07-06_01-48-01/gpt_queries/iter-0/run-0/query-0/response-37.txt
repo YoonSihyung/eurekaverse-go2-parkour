@@ -1,0 +1,91 @@
+```python
+import numpy as np
+import random
+
+def set_terrain(length, width, field_resolution, difficulty):
+    """A repeating slalom of raised beams and shallow pits that tests balance, foot placement, and lateral control."""
+
+    def m_to_idx(m):
+        """Converts meters to quantized indices."""
+        return np.round(m / field_resolution).astype(np.int16) if not (isinstance(m, list) or isinstance(m, tuple)) else [round(i / field_resolution) for i in m]
+
+    # Terrain grid
+    height_field = np.zeros((m_to_idx(length), m_to_idx(width)))
+    goals = np.zeros((8, 2))
+
+    # Useful constants
+    L = m_to_idx(length)
+    W = m_to_idx(width)
+    mid_y = W // 2
+
+    # Keep a safe flat spawn region
+    spawn_len = m_to_idx(2.0)
+    height_field[:spawn_len, :] = 0.0
+
+    # Skill focus: repeated lateral stepping over narrow, elevated beams
+    # The robot must move forward while alternating sideways to stay on top of the beams.
+    # This is inspired by balance beams / agility ladders in dog parks and playgrounds.
+    beam_height = 0.10 + 0.18 * difficulty
+    pit_depth = -0.35 - 0.45 * difficulty
+
+    # Repeating geometry parameters
+    beam_len_m = 1.05 - 0.15 * difficulty
+    beam_len = max(m_to_idx(beam_len_m), m_to_idx(0.6))  # keep reasonable traverse length
+    beam_width = max(m_to_idx(0.45 + 0.10 * difficulty), m_to_idx(0.4))  # allowed narrow obstacle
+    gap_len = m_to_idx(0.45 + 0.30 * difficulty)
+
+    # Side-to-side offsets for slalom pattern
+    max_side = max(1, m_to_idx(0.85))
+    side_offsets = [
+        -max_side,
+        max_side // 2,
+        -max_side // 3,
+        max_side,
+        0,
+        -max_side // 2,
+        max_side // 3,
+        0
+    ]
+
+    # Start with the rest of the course as a pit so the robot must stay on the beams
+    height_field[spawn_len:, :] = pit_depth
+
+    # Ensure the robot has a clean approach to the first obstacle
+    cur_x = spawn_len + m_to_idx(0.2)
+
+    # Place 7 beam segments; the 8th goal is placed near the end of the final segment
+    for i in range(7):
+        # Slight randomness in beam length/offset for realism, but course remains consistent
+        jitter_x = random.randint(-m_to_idx(0.10), m_to_idx(0.10))
+        jitter_y = random.randint(-m_to_idx(0.12), m_to_idx(0.12))
+
+        seg_len = int(np.clip(beam_len + jitter_x, m_to_idx(0.6), m_to_idx(1.35)))
+        center_y = int(np.clip(mid_y + side_offsets[i] + jitter_y, beam_width // 2 + 1, W - beam_width // 2 - 2))
+
+        x1 = int(np.clip(cur_x, spawn_len, L - 2))
+        x2 = int(np.clip(cur_x + seg_len, x1 + 1, L))
+        y1 = int(np.clip(center_y - beam_width // 2, 0, W - 1))
+        y2 = int(np.clip(center_y + beam_width // 2 + 1, 1, W))
+
+        # Raise the beam above the pit
+        height_field[x1:x2, y1:y2] = beam_height
+
+        # Place goal near the center of each beam segment
+        gx = x1 + (x2 - x1) // 2
+        gy = center_y
+        goals[i] = [gx, gy]
+
+        # Move forward to next segment with a gap/pit between beams
+        cur_x = x2 + gap_len
+
+    # Final goal placed near the end of the last beam, still within bounds
+    goals[7] = [min(L - 2, cur_x - gap_len // 2), int(np.clip(mid_y + side_offsets[-1], 0, W - 1))]
+
+    # Make sure the last area remains navigable in terms of goal placement, but still challenging
+    # by leaving surrounding regions as pits.
+    last_goal_x = int(np.clip(goals[7][0], 0, L - 1))
+    last_goal_y = int(np.clip(goals[7][1], 0, W - 1))
+    height_field[max(0, last_goal_x - 2):min(L, last_goal_x + 3), max(0, last_goal_y - 2):min(W, last_goal_y + 3)] = beam_height
+
+    return height_field, goals
+```

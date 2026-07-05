@@ -1,0 +1,91 @@
+import numpy as np
+import random
+
+def set_terrain(length, width, field_resolution, difficulty):
+    """A straight-line course of repeated narrow balance beams over pits for careful foot placement and gait stability."""
+
+    def m_to_idx(m):
+        """Converts meters to quantized indices."""
+        return np.round(m / field_resolution).astype(np.int16) if not (isinstance(m, list) or isinstance(m, tuple)) else [round(i / field_resolution) for i in m]
+
+    height_field = np.zeros((m_to_idx(length), m_to_idx(width)))
+    goals = np.zeros((8, 2))
+
+    # Terrain dimensions in indices
+    L = m_to_idx(length)
+    W = m_to_idx(width)
+    mid_y = W // 2
+
+    # Spawn area: keep the first 2 meters flat and safe
+    spawn_end = m_to_idx(2.0)
+    height_field[:spawn_end, :] = 0.0
+
+    # The course tests repeated balancing on narrow beams with gaps/pits between them
+    # Beam width is chosen to be challenging but still physically plausible for a quadruped
+    beam_width_m = 0.55 + 0.15 * (1.0 - difficulty)   # wider at easy, narrower at hard
+    beam_width = max(m_to_idx(0.4), m_to_idx(beam_width_m))
+
+    # Beam height rises slightly with difficulty to make stepping onto the beam more demanding
+    beam_height = 0.04 + 0.12 * difficulty
+
+    # Gap length increases with difficulty
+    gap_length_m = 0.45 + 0.55 * difficulty
+    gap_length = max(m_to_idx(0.4), m_to_idx(gap_length_m))
+
+    # Beam length is kept large enough for each goal to land safely on the top
+    beam_length_m = 1.05 + 0.15 * (1.0 - difficulty)
+    beam_length = max(m_to_idx(1.0), m_to_idx(beam_length_m))
+
+    # Small lateral offsets to force subtle corrective stepping without changing the overall straight path
+    y_offset_choices = [-0.30, -0.15, 0.0, 0.15, 0.30]
+    y_offset_scale = 0.35 * difficulty
+
+    # Start placing beams after the spawn region
+    cur_x = spawn_end + m_to_idx(0.25)
+
+    # Make everything after spawn initially a pit, then add beams on top
+    height_field[spawn_end:, :] = -0.8
+
+    # Place 7 beam segments; goals 0..6 sit on them, goal 7 is after the last beam
+    for i in range(7):
+        # Small randomized lateral offset, increasing slightly with difficulty
+        y_off_m = random.choice(y_offset_choices) * y_offset_scale
+        y_center = int(np.clip(mid_y + m_to_idx(y_off_m), beam_width // 2 + 1, W - beam_width // 2 - 2))
+
+        x1 = int(cur_x)
+        x2 = int(min(cur_x + beam_length, L - 1))
+        y1 = int(max(0, y_center - beam_width // 2))
+        y2 = int(min(W, y_center + beam_width // 2))
+
+        # Beam top
+        height_field[x1:x2, y1:y2] = beam_height
+
+        # Slightly bevel the beam edges to make it less boxy and more realistic
+        edge_drop = 0.015 + 0.02 * difficulty
+        if y1 - 1 >= 0:
+            height_field[x1:x2, y1 - 1:y1] = beam_height - edge_drop
+        if y2 < W:
+            height_field[x1:x2, y2:y2 + 1] = beam_height - edge_drop
+
+        # Place goal near the middle of the beam
+        goal_x = x1 + (x2 - x1) * 0.5
+        goals[i] = [goal_x, y_center]
+
+        # Advance to the next beam with a pit/gap between
+        cur_x = x2 + gap_length
+
+    # Final goal placed on flat ground after the last beam
+    final_x = int(min(cur_x + m_to_idx(0.6), L - 1))
+    goals[7] = [final_x, mid_y]
+
+    # Restore a flat landing zone after the last beam so the robot can exit cleanly
+    landing_start = int(min(cur_x, L - 1))
+    height_field[landing_start:, :] = -0.8
+    landing_len = m_to_idx(1.0)
+    landing_x2 = int(min(landing_start + landing_len, L))
+    height_field[landing_start:landing_x2, :] = 0.0
+
+    # Ensure the spawn area remains flat at height 0
+    height_field[:spawn_end, :] = 0.0
+
+    return height_field, goals

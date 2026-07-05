@@ -1,0 +1,77 @@
+import numpy as np
+import random
+
+def set_terrain(length, width, field_resolution, difficulty):
+    """A straight sequence of elevated balance beams over pits, testing precision foot placement and body control."""
+
+    def m_to_idx(m):
+        """Converts meters to quantized indices."""
+        return np.round(m / field_resolution).astype(np.int16) if not (isinstance(m, list) or isinstance(m, tuple)) else [round(i / field_resolution) for i in m]
+
+    # Terrain grid
+    height_field = np.zeros((m_to_idx(length), m_to_idx(width)))
+    goals = np.zeros((8, 2))
+
+    # Dimensions and indices
+    L = m_to_idx(length)
+    W = m_to_idx(width)
+    mid_y = W // 2
+
+    # Spawn safety zone: keep the first 2 m flat and obstacle-free
+    spawn_end = m_to_idx(2.0)
+    height_field[:spawn_end, :] = 0.0
+
+    # Make the rest a pit so the robot must stay on the beam tops
+    pit_height = -0.9 - 0.3 * difficulty
+    height_field[spawn_end:, :] = pit_height
+
+    # Balance beam parameters
+    beam_height = 0.10 + 0.20 * difficulty          # higher beams at harder settings
+    beam_width_m = 0.55 + 0.25 * difficulty         # still narrow enough to challenge foot placement
+    beam_width = max(1, m_to_idx(beam_width_m))     # ensure at least one cell wide
+    beam_half = beam_width // 2
+
+    # Gap and step parameters
+    gap_m = 0.35 + 0.55 * difficulty
+    gap = max(1, m_to_idx(gap_m))
+    beam_len_m = 0.95 + 0.15 * (1.0 - difficulty)   # slightly longer/easier at low difficulty
+    beam_len = max(2, m_to_idx(beam_len_m))
+
+    # Optional small lateral offsets to force careful line tracking
+    offset_choices_m = [-0.25, -0.10, 0.0, 0.10, 0.25]
+    offset_scale = 1 + int(2 * difficulty)
+
+    cur_x = spawn_end + m_to_idx(0.3)
+
+    # First goal near the end of the spawn flat
+    goals[0] = [spawn_end - m_to_idx(0.4), mid_y]
+
+    for i in range(7):
+        # Slightly vary beam placement left/right to require small steering corrections
+        offset_m = random.choice(offset_choices_m[: 3 + offset_scale])
+        offset = m_to_idx(offset_m)
+        center_y = int(np.clip(mid_y + offset, beam_half, W - beam_half - 1))
+
+        x1 = cur_x
+        x2 = min(L, cur_x + beam_len)
+        y1 = max(0, center_y - beam_half)
+        y2 = min(W, center_y + beam_half + 1)
+
+        # Create a raised beam
+        height_field[x1:x2, y1:y2] = beam_height
+
+        # Place the goal near the center of each beam
+        goals[i] = [x1 + (x2 - x1) / 2.0, center_y]
+
+        # Leave a pit gap after the beam
+        cur_x = x2 + gap
+
+    # Final goal on the last beam's forward edge, if still inside bounds
+    final_x = min(L - 1, cur_x - gap // 2 if cur_x < L else L - 1)
+    goals[7] = [final_x, mid_y]
+
+    # Ensure all obstacle content stays within bounds and spawn area remains flat
+    height_field[:spawn_end, :] = 0.0
+    height_field = np.clip(height_field, pit_height, beam_height)
+
+    return height_field, goals

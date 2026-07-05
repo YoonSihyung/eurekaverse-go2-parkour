@@ -1,0 +1,86 @@
+import numpy as np
+import random
+
+def set_terrain(length, width, field_resolution, difficulty):
+    """A straight-line sequence of narrow balance beams separated by pits, testing precision foot placement and gap clearing."""
+
+    def m_to_idx(m):
+        """Converts meters to quantized indices."""
+        return np.round(m / field_resolution).astype(np.int16) if not (isinstance(m, list) or isinstance(m, tuple)) else [round(i / field_resolution) for i in m]
+
+    # Terrain grid
+    height_field = np.zeros((m_to_idx(length), m_to_idx(width)))
+    goals = np.zeros((8, 2))
+
+    # Quantized dimensions
+    length_idx = height_field.shape[0]
+    width_idx = height_field.shape[1]
+    mid_y = width_idx // 2
+
+    # Spawn-safe flat region
+    spawn_x = m_to_idx(2.0)
+    height_field[:spawn_x, :] = 0.0
+
+    # Skill focus: repeated narrow beam crossing over pits
+    # Difficulty increases beam width reduction and gap length.
+    beam_width_m = 1.2 - 0.45 * difficulty      # stays challenging but realistic
+    beam_width_m = max(0.45, beam_width_m)      # allow narrow obstacle in the rare exception range
+    beam_width = max(1, m_to_idx(beam_width_m))
+
+    beam_length_m = 1.15 - 0.15 * difficulty
+    beam_length = max(1, m_to_idx(beam_length_m))
+
+    gap_m = 0.35 + 0.65 * difficulty
+    gap = max(1, m_to_idx(gap_m))
+
+    beam_height = 0.18 + 0.18 * difficulty
+    pit_depth = -1.0
+
+    # Slight lateral offsets create a mild steering requirement without becoming a turn course.
+    y_offsets_m = [0.0, 0.15, -0.15, 0.20, -0.20, 0.10, -0.10, 0.0]
+    y_offsets = [int(round(o / field_resolution)) for o in y_offsets_m]
+
+    # Helper to place a raised beam and surrounding pit
+    def add_beam(x1, x2, y_center):
+        y1 = max(0, y_center - beam_width // 2)
+        y2 = min(width_idx, y1 + beam_width)
+        x1c = max(0, x1)
+        x2c = min(length_idx, x2)
+        if x1c < x2c and y1 < y2:
+            # Create pit around the beam to prevent stepping around it
+            height_field[x1c:x2c, :] = pit_depth
+            height_field[x1c:x2c, y1:y2] = beam_height
+
+    # First goal near the end of the spawn region
+    goals[0] = [spawn_x - m_to_idx(0.45), mid_y]
+
+    cur_x = spawn_x + m_to_idx(0.3)
+
+    # Place 6 beams for goals 1..6, then a final landing area for goal 7
+    for i in range(6):
+        y_center = int(np.clip(mid_y + y_offsets[i], beam_width // 2, width_idx - beam_width // 2 - 1))
+        add_beam(cur_x, cur_x + beam_length, y_center)
+
+        # Goal centered on each beam
+        goals[i + 1] = [cur_x + beam_length / 2.0, y_center]
+
+        # Advance with a gap
+        cur_x += beam_length + gap
+
+    # Final beam / finish platform
+    final_y = int(np.clip(mid_y + y_offsets[6], beam_width // 2, width_idx - beam_width // 2 - 1))
+    final_x1 = min(cur_x, length_idx - beam_length - 1)
+    final_x2 = min(final_x1 + beam_length, length_idx)
+    add_beam(final_x1, final_x2, final_y)
+
+    # Last goal on the final beam
+    goals[7] = [final_x1 + beam_length / 2.0, final_y]
+
+    # Ensure the spawn zone remains flat and safe
+    height_field[:spawn_x, :] = 0.0
+
+    # Clamp all goal coordinates to valid indices
+    goals[:, 0] = np.clip(goals[:, 0], 0, length_idx - 1)
+    goals[:, 1] = np.clip(goals[:, 1], 0, width_idx - 1)
+
+    return height_field, goals

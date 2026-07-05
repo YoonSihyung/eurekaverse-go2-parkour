@@ -1,0 +1,323 @@
+
+====================================================================================================
+Running command: /home/yoonsihyung/miniconda3/envs/eureka_lab6/bin/python -u /home/yoonsihyung/workspace/eurekaverse_lab3/eurekaverse/../extreme-parkour/legged_gym/legged_gym/scripts/evaluate.py --task go2 --exptid walk_pretrain --device cuda:0 --headless --max_steps 300 --metric_granularity type --terrain_type it-0_run-0 --terrain_length 18 --terrain_width 4 --vertical_scale 0.005 --horizontal_scale 0.05 --num_cols 10 --num_rows 10 --num_goals 8 --num_terrain_types 10
+====================================================================================================
+The '--headless' CLI argument is deprecated. Omit '--viz' for default headless. If config visualizers are enabled and you want to force headless, use '--viz none'.
+Loading user config located at: '/home/yoonsihyung/miniconda3/envs/eureka_lab6/lib/python3.12/site-packages/isaacsim/kit/data/Kit/IsaacLab/3.0/user.config.json'
+2026-07-05T16:52:52Z [0ms] [Warning] [omni.ext.plugin] [ext: isaaclab_visualizers] Extensions config 'extension.toml' doesn't exist '/home/yoonsihyung/workspace/IsaacLab3/source/isaaclab_visualizers' or '/home/yoonsihyung/workspace/IsaacLab3/source/isaaclab_visualizers/config'
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1783270373.024111  122114 descriptor_database.cc:633] File already exists in database: grpc/health/v1/health.proto
+W0000 00:00:1783270373.024142  122114 message.cc:301] Protobuf GeneratedMessageFactory: File is already registered: grpc/health/v1/health.proto
+2026-07-05T16:52:53Z [68ms] [Error] [carb] [Plugin: libgpu.foundation.plugin.so] Could not load the dynamic library from /home/yoonsihyung/miniconda3/envs/eureka_lab6/lib/python3.12/site-packages/isaacsim/extscache/omni.gpu_foundation-0.0.0+6312fa25.lx64.r.cp312/bin/deps/libgpu.foundation.plugin.so. Error: /home/yoonsihyung/miniconda3/envs/eureka_lab6/lib/python3.12/site-packages/isaacsim/extscache/omni.gpu_foundation-0.0.0+6312fa25.lx64.r.cp312/bin/deps/libgobject-2.0.so.0: undefined symbol: g_dir_unref (Additional information may be available by running the process with the LD_DEBUG environment variable set)
+2026-07-05T16:52:53Z [68ms] [Warning] [carb] Potential plugin preload failed: /home/yoonsihyung/miniconda3/envs/eureka_lab6/lib/python3.12/site-packages/isaacsim/extscache/omni.gpu_foundation-0.0.0+6312fa25.lx64.r.cp312/bin/deps/libgpu.foundation.plugin.so
+2026-07-05T16:52:53Z [68ms] [Error] [omni.ext.plugin] [ext: omni.gpu_foundation-0.0.0] failed to load native plugin: /home/yoonsihyung/miniconda3/envs/eureka_lab6/lib/python3.12/site-packages/isaacsim/extscache/omni.gpu_foundation-0.0.0+6312fa25.lx64.r.cp312/bin/deps/libgpu.foundation.plugin.so
+2026-07-05T16:52:53Z [321ms] [Warning] [omni.usd_config.extension] Enable omni.materialx.libs extension to use MaterialX
+2026-07-05T16:52:54Z [1,038ms] [Warning] [isaacsim.core.simulation_manager.plugin] USD stage is not available; stage-opened subscription is deferred
+2026-07-05T16:52:54Z [1,038ms] [Warning] [isaacsim.core.simulation_manager.plugin] USD stage is not available; stage-opened subscription is deferred
+[ISAACLAB] AppLauncher initialization complete
+2026-07-05T16:52:54Z [1,969ms] [Warning] [isaaclab_physx.physics.physx_manager] TGS solver with enable_external_forces_every_iteration=False may cause noisy velocities.
+[INFO]: Base environment:
+	Environment device    : cuda:0
+	Environment seed      : 1
+	Physics step-size     : 0.005
+	Rendering step-size   : 0.02
+	Environment step-size : 0.02
+[INFO]: Registered backend 'physx' for factory ContactSensor.
+[INFO]: Physics scene prim path: /physicsScene
+********************************************************************************
+Start creating ground...
+Automatically fixed terrain 3: goals too close to edge
+Automatically fixed terrain 3: goals too close to edge
+Automatically fixed terrain 3: goals too close to edge
+Automatically fixed terrain 3: goals too close to edge
+Automatically fixed terrain 3: goals too close to edge
+Automatically fixed terrain 3: goals too close to edge
+Automatically fixed terrain 3: goals too close to edge
+Automatically fixed terrain 3: goals too close to edge
+Automatically fixed terrain 3: goals too close to edge
+Automatically fixed terrain 3: goals too close to edge
+Automatically fixed terrain 4: min terrain height -206 is below -1
+Automatically fixed terrain 4: min terrain height -213 is below -1
+Automatically fixed terrain 4: min terrain height -220 is below -1
+Automatically fixed terrain 4: min terrain height -226 is below -1
+Automatically fixed terrain 4: min terrain height -233 is below -1
+Automatically fixed terrain 4: min terrain height -240 is below -1
+Automatically fixed terrain 6: obstacles length too small
+Automatically fixed terrain 6: obstacles length too small
+Automatically fixed terrain 6: obstacles length too small
+Automatically fixed terrain 6: obstacles length too small
+Automatically fixed terrain 6: obstacles length too small
+Automatically fixed terrain 6: obstacles length too small
+Automatically fixed terrain 6: obstacles length too small
+Automatically fixed terrain 6: obstacles length too small
+Automatically fixed terrain 6: obstacles length too small
+Automatically fixed terrain 6: obstacles length too small
+Automatically fixed terrain 7: obstacles length too small
+Automatically fixed terrain 7: obstacles length too small
+Converting heightmap to trimesh...
+Created vertices (3800000, 3)
+Created triangles (7590402, 3)
+Adding trimesh to simulation...
+Terrain mesh has 7590402 triangles; splitting into 3 prims for PhysX cooking...
+Trimesh added
+Finished creating ground. Time taken 16.89 s
+********************************************************************************
+[INFO]: Registered backend 'physx' for factory Articulation.
+[INFO]: Time taken for scene creation Last: 24.211092 s, Mean: 24.211092 s, Std: 0.000000 s, N: 1
+[INFO]: Scene manager:  <class InteractiveScene>
+	Number of environments: 6144
+	Environment spacing   : 5.0
+	Source prim name      : /World/envs/env_0
+	Global prim paths     : []
+	Replicate physics     : True
+[INFO]: Starting the simulation. This may take a few seconds. Please wait...
+2026-07-05T16:54:04Z [71,538ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+[INFO]: Simulation parameters for joints in /World/envs/env_.*/Robot:
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                  Simulation Joint Information (Prim path: /World/envs/env_.*/Robot)                                                  |
++-------+----------------+-----------+---------+----------+-----------------+------------------+------------------+------------------+-----------------+---------------+
+| Index | Name           | Stiffness | Damping | Armature | Static Friction | Dynamic Friction | Viscous Friction | Position Limits  | Velocity Limits | Effort Limits |
++-------+----------------+-----------+---------+----------+-----------------+------------------+------------------+------------------+-----------------+---------------+
+|   0   | FL_hip_joint   |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-1.047, 1.047]  |      30.100     |    1.0e+09    |
+|   1   | FR_hip_joint   |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-1.047, 1.047]  |      30.100     |    1.0e+09    |
+|   2   | RL_hip_joint   |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-1.047, 1.047]  |      30.100     |    1.0e+09    |
+|   3   | RR_hip_joint   |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-1.047, 1.047]  |      30.100     |    1.0e+09    |
+|   4   | FL_thigh_joint |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-1.571, 3.491]  |      30.100     |    1.0e+09    |
+|   5   | FR_thigh_joint |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-1.571, 3.491]  |      30.100     |    1.0e+09    |
+|   6   | RL_thigh_joint |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-0.524, 4.538]  |      30.100     |    1.0e+09    |
+|   7   | RR_thigh_joint |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-0.524, 4.538]  |      30.100     |    1.0e+09    |
+|   8   | FL_calf_joint  |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-2.723, -0.838] |      15.700     |    1.0e+09    |
+|   9   | FR_calf_joint  |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-2.723, -0.838] |      15.700     |    1.0e+09    |
+|   10  | RL_calf_joint  |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-2.723, -0.838] |      15.700     |    1.0e+09    |
+|   11  | RR_calf_joint  |   0.000   |  0.000  |  0.000   |      0.000      |      0.000       |      0.000       | [-2.723, -0.838] |      15.700     |    1.0e+09    |
++-------+----------------+-----------+---------+----------+-----------------+------------------+------------------+------------------+-----------------+---------------+
+[INFO]: Time taken for simulation start Last: 58.241524 s, Mean: 58.241524 s, Std: 0.000000 s, N: 1
+[INFO]: Completed setting up the environment...
+'train_cfg' provided -> Ignoring 'name=go2'
+Using MLP and Priviliged Env encoder ActorCritic structure
+********************************************************************************
+Loading model from /home/yoonsihyung/workspace/eurekaverse_lab3/extreme-parkour/legged_gym/logs/parkour/walk_pretrain/model_1000.pt...
+********************************************************************************
+Running for 300 steps
+STATISTICS SUMMARY
+Reward: -0.71
+Reward term action_rate: -0.08
+Reward term ang_vel_xy: -0.15
+Reward term collision: -0.88
+Reward term delta_torques: -0.00
+Reward term dof_acc: -0.05
+Reward term dof_error: -0.03
+Reward term feet_edge: -0.04
+Reward term feet_stumble: -0.04
+Reward term hip_pos: -0.07
+Reward term lin_vel_z: -0.02
+Reward term orientation: 0.00
+Reward term torques: -0.01
+Reward term tracking_goal_vel: 0.40
+Reward term tracking_yaw: 0.26
+Episode length: 33.90
+Number of goals reached: 0.16
+Edge violation: 114.99
+
+STATISTICS FOR TERRAIN TYPE 00
+Reward: -0.28
+Reward term action_rate: -0.05
+Reward term ang_vel_xy: -0.14
+Reward term collision: -0.26
+Reward term delta_torques: -0.00
+Reward term dof_acc: -0.04
+Reward term dof_error: -0.03
+Reward term feet_edge: -0.01
+Reward term feet_stumble: -0.01
+Reward term hip_pos: -0.06
+Reward term lin_vel_z: -0.02
+Reward term orientation: 0.00
+Reward term torques: -0.01
+Reward term tracking_goal_vel: 0.15
+Reward term tracking_yaw: 0.20
+Episode length: 25.87
+Number of goals reached: 0.00
+Edge violation: 1.64
+
+STATISTICS FOR TERRAIN TYPE 01
+Reward: -1.04
+Reward term action_rate: -0.06
+Reward term ang_vel_xy: -0.11
+Reward term collision: -0.93
+Reward term delta_torques: -0.00
+Reward term dof_acc: -0.03
+Reward term dof_error: -0.03
+Reward term feet_edge: -0.11
+Reward term feet_stumble: -0.05
+Reward term hip_pos: -0.05
+Reward term lin_vel_z: -0.02
+Reward term orientation: 0.00
+Reward term torques: -0.01
+Reward term tracking_goal_vel: 0.13
+Reward term tracking_yaw: 0.23
+Episode length: 27.54
+Number of goals reached: 0.16
+Edge violation: 261.34
+
+STATISTICS FOR TERRAIN TYPE 02
+Reward: -0.37
+Reward term action_rate: -0.03
+Reward term ang_vel_xy: -0.07
+Reward term collision: -0.38
+Reward term delta_torques: -0.00
+Reward term dof_acc: -0.02
+Reward term dof_error: -0.02
+Reward term feet_edge: -0.04
+Reward term feet_stumble: -0.04
+Reward term hip_pos: -0.04
+Reward term lin_vel_z: -0.01
+Reward term orientation: 0.00
+Reward term torques: -0.01
+Reward term tracking_goal_vel: 0.17
+Reward term tracking_yaw: 0.13
+Episode length: 16.14
+Number of goals reached: 0.08
+Edge violation: 97.95
+
+STATISTICS FOR TERRAIN TYPE 03
+Reward: -1.54
+Reward term action_rate: -0.20
+Reward term ang_vel_xy: -0.37
+Reward term collision: -2.74
+Reward term delta_torques: -0.00
+Reward term dof_acc: -0.11
+Reward term dof_error: -0.08
+Reward term feet_edge: -0.02
+Reward term feet_stumble: -0.08
+Reward term hip_pos: -0.14
+Reward term lin_vel_z: -0.05
+Reward term orientation: 0.00
+Reward term torques: -0.03
+Reward term tracking_goal_vel: 1.67
+Reward term tracking_yaw: 0.61
+Episode length: 84.31
+Number of goals reached: 0.43
+Edge violation: 15.15
+
+STATISTICS FOR TERRAIN TYPE 04
+Reward: -0.65
+Reward term action_rate: -0.08
+Reward term ang_vel_xy: -0.18
+Reward term collision: -0.69
+Reward term delta_torques: -0.00
+Reward term dof_acc: -0.05
+Reward term dof_error: -0.04
+Reward term feet_edge: -0.07
+Reward term feet_stumble: -0.02
+Reward term hip_pos: -0.08
+Reward term lin_vel_z: -0.03
+Reward term orientation: 0.00
+Reward term torques: -0.01
+Reward term tracking_goal_vel: 0.32
+Reward term tracking_yaw: 0.29
+Episode length: 38.54
+Number of goals reached: 0.24
+Edge violation: 85.66
+
+STATISTICS FOR TERRAIN TYPE 05
+Reward: -0.35
+Reward term action_rate: -0.09
+Reward term ang_vel_xy: -0.19
+Reward term collision: -0.64
+Reward term delta_torques: -0.00
+Reward term dof_acc: -0.06
+Reward term dof_error: -0.04
+Reward term feet_edge: -0.04
+Reward term feet_stumble: -0.04
+Reward term hip_pos: -0.08
+Reward term lin_vel_z: -0.03
+Reward term orientation: 0.00
+Reward term torques: -0.01
+Reward term tracking_goal_vel: 0.58
+Reward term tracking_yaw: 0.31
+Episode length: 38.42
+Number of goals reached: 0.20
+Edge violation: 81.95
+
+STATISTICS FOR TERRAIN TYPE 06
+Reward: -0.60
+Reward term action_rate: -0.13
+Reward term ang_vel_xy: -0.26
+Reward term collision: -0.91
+Reward term delta_torques: -0.00
+Reward term dof_acc: -0.08
+Reward term dof_error: -0.05
+Reward term feet_edge: -0.01
+Reward term feet_stumble: -0.01
+Reward term hip_pos: -0.11
+Reward term lin_vel_z: -0.04
+Reward term orientation: 0.00
+Reward term torques: -0.02
+Reward term tracking_goal_vel: 0.60
+Reward term tracking_yaw: 0.43
+Episode length: 54.18
+Number of goals reached: 0.30
+Edge violation: 17.42
+
+STATISTICS FOR TERRAIN TYPE 07
+Reward: -0.49
+Reward term action_rate: -0.06
+Reward term ang_vel_xy: -0.13
+Reward term collision: -0.47
+Reward term delta_torques: -0.00
+Reward term dof_acc: -0.04
+Reward term dof_error: -0.03
+Reward term feet_edge: -0.02
+Reward term feet_stumble: -0.03
+Reward term hip_pos: -0.06
+Reward term lin_vel_z: -0.02
+Reward term orientation: 0.00
+Reward term torques: -0.01
+Reward term tracking_goal_vel: 0.17
+Reward term tracking_yaw: 0.20
+Episode length: 25.62
+Number of goals reached: 0.07
+Edge violation: 50.93
+
+STATISTICS FOR TERRAIN TYPE 08
+Reward: -0.37
+Reward term action_rate: -0.01
+Reward term ang_vel_xy: -0.02
+Reward term collision: -0.39
+Reward term delta_torques: -0.00
+Reward term dof_acc: -0.01
+Reward term dof_error: -0.01
+Reward term feet_edge: -0.01
+Reward term feet_stumble: -0.02
+Reward term hip_pos: -0.01
+Reward term lin_vel_z: -0.00
+Reward term orientation: 0.00
+Reward term torques: -0.00
+Reward term tracking_goal_vel: 0.05
+Reward term tracking_yaw: 0.06
+Episode length: 6.54
+Number of goals reached: 0.03
+Edge violation: 209.33
+
+STATISTICS FOR TERRAIN TYPE 09
+Reward: -1.44
+Reward term action_rate: -0.04
+Reward term ang_vel_xy: -0.07
+Reward term collision: -1.35
+Reward term delta_torques: -0.00
+Reward term dof_acc: -0.02
+Reward term dof_error: -0.02
+Reward term feet_edge: -0.10
+Reward term feet_stumble: -0.09
+Reward term hip_pos: -0.04
+Reward term lin_vel_z: -0.01
+Reward term orientation: 0.00
+Reward term torques: -0.01
+Reward term tracking_goal_vel: 0.13
+Reward term tracking_yaw: 0.18
+Episode length: 21.87
+Number of goals reached: 0.10
+Edge violation: 328.52
+
+
+[INFO]: SimulationContext cleared

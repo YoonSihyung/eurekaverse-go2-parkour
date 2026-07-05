@@ -1,0 +1,42 @@
+quadruped_model: go2
+iterations: 1
+train_iterations: 50
+eval_steps: 300
+num_terrain_types: 10
+num_parallel_runs: 1
+num_parallel_checks: 2
+render_images: false
+best_run_proportions:
+- 0.75
+- 0.25
+deterministic_gpu: true
+wandb: false
+gpt_model: gpt-5.4-mini
+initial_query_sample_multiplier: 4
+evolution_query_sample_multiplier: 4
+max_gpt_queries: 10
+resume_run: ''
+terrain_train:
+  terrain_length: 18
+  terrain_width: 4
+  vertical_scale: 0.005
+  horizontal_scale: 0.05
+  num_cols: 40
+  num_rows: 10
+  num_goals: 8
+terrain_eval:
+  terrain_length: 18
+  terrain_width: 4
+  vertical_scale: 0.005
+  horizontal_scale: 0.05
+  num_cols: 10
+  num_rows: 10
+  num_goals: 8
+terrain_benchmark:
+  terrain_length: 18
+  terrain_width: 4
+  vertical_scale: 0.005
+  horizontal_scale: 0.05
+  num_cols: 20
+  num_rows: 10
+  num_goals: 8

@@ -1,0 +1,93 @@
+import numpy as np
+import random
+
+def set_terrain(length, width, field_resolution, difficulty):
+    """A centered stepping-stone course with narrow raised pads over shallow pits to train precision foot placement and balance."""
+
+    def m_to_idx(m):
+        """Converts meters to quantized indices."""
+        return np.round(m / field_resolution).astype(np.int16) if not (isinstance(m, list) or isinstance(m, tuple)) else [round(i / field_resolution) for i in m]
+
+    # Terrain grid
+    height_field = np.zeros((m_to_idx(length), m_to_idx(width)))
+    goals = np.zeros((8, 2))
+
+    L = m_to_idx(length)
+    W = m_to_idx(width)
+    mid_y = W // 2
+
+    # Spawn-safe region
+    spawn_x = m_to_idx(2.0)
+    height_field[:spawn_x, :] = 0.0
+
+    # --- Course design ---
+    # Repeating skill: precise stepping between a sequence of narrow raised pads
+    # with shallow pits between them. The robot must stay centered and control
+    # foot placement while transitioning across consistent obstacles.
+
+    # Difficulty-dependent parameters
+    pad_length_m = 0.65 - 0.15 * difficulty          # longitudinal pad size
+    pad_width_m = 1.15 - 0.15 * difficulty           # lateral pad size (>= 1m)
+    pit_depth = -0.18 - 0.45 * difficulty             # shallow to moderate pits
+    gap_length_m = 0.55 + 0.35 * difficulty           # spacing between pads
+    pad_height = 0.03 + 0.07 * difficulty             # small raised platform
+
+    pad_length = max(m_to_idx(0.4), m_to_idx(pad_length_m))
+    pad_width = max(m_to_idx(1.0), m_to_idx(pad_width_m))
+    gap_length = max(m_to_idx(0.4), m_to_idx(gap_length_m))
+
+    # Add a slight lateral offset pattern so the robot must keep correcting
+    lateral_offsets_m = [0.0, 0.12, -0.10, 0.14, -0.12, 0.10, -0.08]
+    lateral_offsets = [m_to_idx(v) for v in lateral_offsets_m]
+
+    # Keep all obstacles within bounds
+    min_y = 0
+    max_y = W
+
+    # Fill course area after spawn with pits by default
+    height_field[spawn_x:, :] = pit_depth
+
+    # Build 7 pads and use 8 goals: one before the first pad, then one per pad
+    cur_x = spawn_x + m_to_idx(0.4)
+
+    # Goal 0: at the end of the spawn region
+    goals[0] = [spawn_x - m_to_idx(0.25), mid_y]
+
+    def place_pad(x_start, y_center, length_idx, width_idx, z):
+        """Places a rectangular stepping pad."""
+        x_end = min(L, x_start + length_idx)
+        half_w = width_idx // 2
+        y1 = max(min_y, y_center - half_w)
+        y2 = min(max_y, y_center + half_w)
+        height_field[x_start:x_end, y1:y2] = z
+        return x_end
+
+    # Create sequence of pads and goals
+    for i in range(7):
+        y_center = int(np.clip(mid_y + lateral_offsets[i], pad_width // 2, W - pad_width // 2 - 1))
+        x_start = cur_x
+        x_end = place_pad(x_start, y_center, pad_length, pad_width, pad_height)
+
+        # Put goal near the center/front half of the pad
+        goal_x = min(L - 1, x_start + pad_length // 2)
+        goals[i + 1] = [goal_x, y_center]
+
+        # Move forward to next pit segment
+        cur_x = x_end + gap_length
+
+        # If we are close to the end, stop early and let the final goal be on flat ground
+        if cur_x >= L - m_to_idx(1.0):
+            break
+
+    # Ensure the remaining terrain after the final obstacle is flat ground so the last approach is clean
+    final_flat_start = min(L, int(cur_x))
+    height_field[final_flat_start:, :] = 0.0
+
+    # Final goal placed on the flat landing zone near the end of the field
+    goals[-1] = [L - m_to_idx(0.7), mid_y]
+
+    # Clamp goals to valid indices
+    goals[:, 0] = np.clip(goals[:, 0], 0, L - 1)
+    goals[:, 1] = np.clip(goals[:, 1], 0, W - 1)
+
+    return height_field, goals

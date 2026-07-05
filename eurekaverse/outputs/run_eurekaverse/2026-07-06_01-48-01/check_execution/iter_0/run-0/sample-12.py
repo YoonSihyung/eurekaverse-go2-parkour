@@ -1,0 +1,104 @@
+import numpy as np
+import random
+
+def set_terrain(length, width, field_resolution, difficulty):
+    """A straight course of repeating narrow beams and stepping stones over shallow pits."""
+
+    def m_to_idx(m):
+        """Converts meters to quantized indices."""
+        return np.round(m / field_resolution).astype(np.int16) if not (isinstance(m, list) or isinstance(m, tuple)) else [round(i / field_resolution) for i in m]
+
+    # Terrain grid
+    height_field = np.zeros((m_to_idx(length), m_to_idx(width)))
+    goals = np.zeros((8, 2))
+
+    n_x = height_field.shape[0]
+    n_y = height_field.shape[1]
+    mid_y = n_y // 2
+
+    # -------------------------------------------------------------------------
+    # Course idea:
+    # A "balancing line" style parkour course with repeated long, narrow beams
+    # separated by small gaps over pits. The quadruped must keep a straight
+    # heading and carefully cross each beam without stepping off.
+    # This tests precision foot placement, balance, and gap crossing.
+    # -------------------------------------------------------------------------
+
+    # Quantized dimensions
+    spawn_len = m_to_idx(2.0)  # keep first 2 m flat for safe spawn
+    pit_depth = -0.55 - 0.25 * difficulty  # deeper pits at higher difficulty
+    beam_h = 0.02 + 0.05 * difficulty      # slightly raised beam top
+
+    # Beam and gap sizing (repeated consistently)
+    beam_len_m = 0.85 - 0.15 * difficulty
+    beam_len = max(m_to_idx(beam_len_m), m_to_idx(0.45))  # ensure reasonable minimum
+    gap_len_m = 0.20 + 0.55 * difficulty
+    gap_len = max(m_to_idx(gap_len_m), m_to_idx(0.20))
+
+    # Beam width: narrow but still realistic; harder difficulty narrows it slightly
+    beam_width_m = 1.15 - 0.35 * difficulty
+    beam_width = max(m_to_idx(beam_width_m), m_to_idx(0.40))
+
+    # Slight lateral offsets to require small corrections, but no large turns
+    max_offset = max(1, m_to_idx(0.18 + 0.12 * difficulty))
+
+    def clamp(v, lo, hi):
+        return max(lo, min(hi, v))
+
+    def add_beam(x1, x2, center_y):
+        """Places a raised beam above a pit."""
+        half_w = beam_width // 2
+        y1 = clamp(center_y - half_w, 0, n_y)
+        y2 = clamp(center_y + half_w, 0, n_y)
+        x1 = clamp(x1, 0, n_x)
+        x2 = clamp(x2, 0, n_x)
+        height_field[x1:x2, y1:y2] = beam_h
+
+    # Spawn area: flat ground
+    height_field[:spawn_len, :] = 0.0
+
+    # Everything beyond spawn starts as a pit, so the robot must use the beams
+    height_field[spawn_len:, :] = pit_depth
+
+    # Build a sequence of 7 beams, yielding 8 goals total
+    cur_x = spawn_len
+    cur_y = mid_y
+
+    # First goal near the end of the spawn area
+    goals[0] = [spawn_len - m_to_idx(0.4), mid_y]
+
+    for i in range(7):
+        # Small random lateral drift for each beam center
+        dy = random.randint(-max_offset, max_offset)
+        cur_y = clamp(cur_y + dy, beam_width // 2, n_y - beam_width // 2 - 1)
+
+        # Optional small beam length variation for realism, but course stays consistent
+        jitter = random.randint(-m_to_idx(0.08), m_to_idx(0.08)) if beam_len > m_to_idx(0.5) else 0
+        b_len = clamp(beam_len + jitter, m_to_idx(0.45), n_x)
+
+        # Place the beam
+        add_beam(cur_x, cur_x + b_len, cur_y)
+
+        # Goal centered on the beam
+        goals[i] = [cur_x + b_len / 2, cur_y]
+
+        # Advance to next segment
+        cur_x += b_len + gap_len
+
+        # Keep pits after each beam until the next beam is placed
+        if cur_x < n_x:
+            height_field[cur_x:min(cur_x + gap_len, n_x), :] = pit_depth
+
+    # Final goal slightly ahead of the last beam, still within bounds
+    final_goal_x = clamp(cur_x - gap_len // 2, 0, n_x - 1)
+    goals[7] = [final_goal_x, cur_y]
+
+    # Ensure the landing/final region is not accidentally overwritten by pit if it
+    # lies inside a beam; beam height should remain.
+    for i in range(7):
+        gx = int(goals[i][0])
+        gy = int(goals[i][1])
+        if 0 <= gx < n_x and 0 <= gy < n_y:
+            height_field[gx, gy] = beam_h
+
+    return height_field, goals
