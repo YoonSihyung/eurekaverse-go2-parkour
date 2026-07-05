@@ -36,6 +36,8 @@ replay_idx_lock = threading.Lock()
 replay_initial_only = False  # Set to True to only replay initial queries and generate evolution queries from scratch
 
 gpt_pricing = {
+     "gpt-5.4": (2.5e-6, 15e-6),
+     "gpt-5.4-mini": (0.75e-6, 4.5e-6),
      "gpt-4o-2024-11-20": (2.5e-6, 10e-6),
      "gpt-4.1-2025-04-14": (2.0e-6, 8.0e-6),
      'gpt-4o-mini-2024-07-18': (0.15e-6, 0.6e-6)
@@ -155,7 +157,7 @@ def query_gpt(cfg, messages: List[dict], num_samples: int = 1
         # usage metrics are not returned in streaming mode → estimate token counts
         prompt_tokens = sum(len(m["content"].split()) for m in messages)
         response_tokens = sum(len(r.split()) for r in raw_responses)
-        prompt_price, resp_price = gpt_pricing[cfg.gpt_model]
+        prompt_price, resp_price = gpt_pricing.get(cfg.gpt_model, (0.0, 0.0))
         prompt_cost = prompt_price * prompt_tokens
         response_cost = resp_price * response_tokens
         logging.info(f"Approx. cost: ${prompt_cost + response_cost:0.4f}")

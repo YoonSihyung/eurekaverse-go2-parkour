@@ -3,24 +3,23 @@ defaults:
   - override hydra/launcher:  local
   - override hydra/output:  local
 
-quadruped_model: "go1"                 # Robot model, "go1" or "a1"
+quadruped_model: "go2"                 # Robot model (our reproduction targets Unitree Go2)
 
-iterations: 9                          # Number of environment generation iterations
-train_iterations: 1500                 # Number of training iterations per generated environment
+iterations: 5                          # Number of environment generation iterations (paper value; fork had 9)
+train_iterations: 2000                 # Number of training iterations per generated environment (paper value; fork had 1500)
 eval_steps: 1001                       # Number of evaluation steps per environment (1001 is fairly accurate, 10001 is most accurate)
 num_terrain_types: 10                  # Number of terrains to generate
-num_parallel_runs: 1                   # Number of parallel training runs per iteration
+num_parallel_runs: 1                   # Single GPU: one lineage (paper used 8 on 8 GPUs; documented deviation)
 num_parallel_checks: 4                 # Number of parallel runs to query and check executability of GPT responses
 
-render_images: False                   # Render generated environments (doesn't work on some headless servers)
+render_images: False                   # Render generated environments (render.py not ported)
 best_run_proportions: [0.75, 0.25]     # Proportion of next-iteration runs to train on for the best, next-best, etc. curent runs
 deterministic_gpu: True                # Deterministically assign training and eval evenly across GPUs (assumes they are all empty)
 
-wandb: True                            # Use wandb tracking
+wandb: False                           # Use wandb tracking
 
-gpt_model: "gpt-4.1-2025-04-14"        
-initial_query_sample_multiplier: 1     # Multiplier for the number of samples to query in first iteration
-# initial_query_sample_multiplier: 4     # Multiplier for the number of samples to query in first iteration
+gpt_model: "gpt-5.4-mini"
+initial_query_sample_multiplier: 4     # Multiplier for the number of samples to query in first iteration (paper value)
 evolution_query_sample_multiplier: 4   # Multiplier for the number of samples to query in later iterations
 max_gpt_queries: 10                    # Maximum number of attempted GPT queries for a single prompt
 
@@ -30,30 +29,31 @@ hydra:
   job:
     chdir: True
 
-# terrain stuff (overwrites LeggedRobotCfg)
+# Terrain flags appended to train/eval commands (overwrite LeggedRobotCfg).
+# MUST match the audited backend defaults (original: horizontal_scale 0.05, 10 rows).
 terrain_train: # controls all training terrains
   terrain_length: 18
   terrain_width: 4
   vertical_scale: 0.005
-  horizontal_scale: 0.1
-  num_cols: 20
-  num_rows: 8
+  horizontal_scale: 0.05
+  num_cols: 40
+  num_rows: 10
   num_goals: 8
 
 terrain_eval: # controls all eval terrains (same set_terrain functions as train but less terrain redundancy)
   terrain_length: 18
   terrain_width: 4
   vertical_scale: 0.005
-  horizontal_scale: 0.1
+  horizontal_scale: 0.05
   num_cols: 10
-  num_rows: 8
+  num_rows: 10
   num_goals: 8
 
-terrain_benchmark: # controls benchmark terrain (which is only used for eval and would lead to OOM error if video is used); more cols to account for more set_terrain_fns
+terrain_benchmark: # controls benchmark terrain (20 tasks -> 20 cols)
   terrain_length: 18
   terrain_width: 4
   vertical_scale: 0.005
-  horizontal_scale: 0.1
+  horizontal_scale: 0.05
   num_cols: 20
-  num_rows: 8
+  num_rows: 10
   num_goals: 8

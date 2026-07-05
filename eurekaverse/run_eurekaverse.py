@@ -24,26 +24,14 @@ os.environ["WANDB_SILENT"] = "True"
 httpx_logger = logging.getLogger("httpx")
 httpx_logger.setLevel(logging.WARNING)
 
-python_prefix = "/isaaclab/isaaclab.sh -p" # prefix for using python
-env_vars_sh = "/isaaclab/workspace/export_vars.sh" # path to script that exports env vars
+# Our stack: conda env python (the fork used a docker path "/isaaclab/isaaclab.sh -p").
+python_prefix = os.path.expanduser("~/miniconda3/envs/eureka_lab6/bin/python")
 
-# load env vars from script (e.g api keys)
-assign_rx = re.compile(r'^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$')
-
-with open(env_vars_sh, "r") as f:
-    for raw in f:
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue                           # comment / blank → skip
-        m = assign_rx.match(line)
-        if not m:
-            # Non‑assignment lines (functions, if‑blocks, etc.) are ignored.
-            continue
-        key, val = m.groups()
-        if (val.startswith(("'", '"')) and val.endswith(("'", '"'))
-                and len(val) >= 2):
-            val = val[1:-1]                   # drop surrounding quotes
-        os.environ[key] = val
+# Environment for the training/eval subprocesses. OPENAI_API_KEY is inherited from
+# the calling shell (the fork loaded a docker-only export_vars.sh here instead).
+os.environ["OMNI_KIT_ACCEPT_EULA"] = "YES"
+assert os.environ.get("OPENAI_API_KEY"), \
+    "OPENAI_API_KEY is not set. Add `export OPENAI_API_KEY=sk-...` to ~/.bashrc and re-source it."
 
 from eurekaverse.utils.terrain_utils import set_terrain, copy_terrain, setup_generated_terrains, get_eval_stats_from_file, stat_to_str, get_terrain_descriptions, extract_fixed_terrains, get_terrain_stats_string
 from eurekaverse.utils.gpt_utils import prepare_prompts, query_gpt_initial, query_gpt_evolution, log_gpt_query
@@ -167,7 +155,7 @@ def parallel_run(cfg, it, parallel_run_id, only_parallel_run:bool=False):
     copy_terrain(terrain_filename, f"{output_dir}/terrain_iter-{it}_run-{parallel_run_id}.py")
 
     # Get the exptid of the run to resume from
-    load_exptid = f"{run_id}_{it-1}_{resume_run_id}" if it > 0 else "flat_action-d0_spd-08"
+    load_exptid = f"{run_id}_{it-1}_{resume_run_id}" if it > 0 else "walk_pretrain"
     exptid = f"{run_id}_{it}_{parallel_run_id}"
 
     # Start evaluation (training terrain before training) process
