@@ -255,6 +255,10 @@ def check_response(cfg, gpt_response, it, parallel_run_id, sample_id, terrain_id
     command = f"{python_prefix} -u {train_script} --task {cfg.quadruped_model} --exptid {run_id}_{it}_{parallel_run_id} --device {gpu} --max_iterations 0 --terrain_type {terrain_type} --check_terrain_feasibility"
     for k, v in cfg.terrain_train.items():
         command = command + f" --{k} {v}"
+    # Feasibility is decided during terrain construction, BEFORE robots spawn, so a tiny
+    # env count keeps the graceful-exit phase lightweight. (With the default 6144 envs,
+    # N parallel checks running to completion exhausted system RAM/VRAM and froze the machine.)
+    command = command + " --num_envs 16"
     process = run_subprocess(command=command, log_file=log_file)
     success, timeout = wait_subprocess(process, log_file, success_log="Converting heightmap to trimesh", failure_log="Traceback", timeout=10*60)
     if timeout:
