@@ -35,7 +35,7 @@ assert os.environ.get("OPENAI_API_KEY"), \
 
 from eurekaverse.utils.terrain_utils import set_terrain, copy_terrain, setup_generated_terrains, get_eval_stats_from_file, stat_to_str, get_terrain_descriptions, extract_fixed_terrains, get_terrain_stats_string
 from eurekaverse.utils.gpt_utils import prepare_prompts, query_gpt_initial, query_gpt_evolution, log_gpt_query
-from eurekaverse.utils.misc_utils import get_num_gpus, get_freest_gpu, run_subprocess, wait_subprocess, seeded
+from eurekaverse.utils.misc_utils import get_num_gpus, get_freest_gpu, run_subprocess, wait_subprocess, terminate_subprocess, seeded
 
 file_dir = os.path.dirname(os.path.abspath(__file__))  # Location of this file
 
@@ -87,7 +87,7 @@ def run_training(cfg, it, parallel_run_id, load_exptid):
     success, timeout = wait_subprocess(process, log_file, success_log="Starting training", failure_log="Traceback", timeout=20*60)
     if timeout:
         logging.warning(f"Timeout while training for run {parallel_run_id}!")
-        process.terminate()
+        terminate_subprocess(process)
     if not success or timeout:
         return None, None
     return process, log_file
@@ -122,7 +122,7 @@ def run_evaluation(cfg, it, parallel_run_id, exptid, terrain):
     success, timeout = wait_subprocess(process, log_file, success_log="Loading model", failure_log="Traceback", timeout=20*60)
     if timeout:
         logging.warning(f"Timeout while evaluating for run {parallel_run_id}!")
-        process.terminate()
+        terminate_subprocess(process)
     if not success or timeout:
         return None, None
     return process, log_file
@@ -259,7 +259,15 @@ def check_response(cfg, gpt_response, it, parallel_run_id, sample_id, terrain_id
     success, timeout = wait_subprocess(process, log_file, success_log="Converting heightmap to trimesh", failure_log="Traceback", timeout=10*60)
     if timeout:
         logging.warning(f"Timeout while checking response for run {parallel_run_id}, sample {sample_id}!")
-    process.terminate()
+        terminate_subprocess(process)
+        return success, sample_id
+    # Let the check exit on its own (max_iterations=0 finishes in ~1-2 min).
+    # Hard-killing kit mid-init leaves the carbonite semaphore locked and
+    # deadlocks every subsequent launch (root cause of the all-timeouts loop).
+    try:
+        process.wait(timeout=300)
+    except subprocess.TimeoutExpired:
+        terminate_subprocess(process)
     return success, sample_id
 
 def initial_generation(cfg, parallel_run_id):

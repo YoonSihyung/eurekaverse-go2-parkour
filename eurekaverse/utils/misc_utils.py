@@ -96,6 +96,7 @@ def run_subprocess(command: str, log_file: Path | str | None):
             text=True,
             bufsize=1,
             env=env,
+            start_new_session=True,  # own process group so we can kill bash + children together
         )
     else:
         # Log to file - write header then redirect output
@@ -232,3 +233,27 @@ def seeded():
 def alphanum_key(s):
     # Use this with sorted() to sort a list of strings alphanumerically
     return [int(text) if text.isdigit() else text for text in re.split('(\d+)', s)]
+
+def terminate_subprocess(process, grace=20):
+    """Kill a run_subprocess() process GROUP (bash wrapper + Isaac Sim children).
+
+    Plain process.terminate() only signals the bash wrapper: the python child keeps
+    running, or dies mid-init holding the carbonite shared-memory semaphore
+    (/dev/shm/sem.carbonite-sharedmemory), which then deadlocks every future kit
+    launch. SIGINT first for a graceful kit shutdown, then SIGKILL the group.
+    """
+    import signal
+    try:
+        pgid = os.getpgid(process.pid)
+    except (ProcessLookupError, PermissionError):
+        return
+    for sig, wait_s in ((signal.SIGINT, grace), (signal.SIGKILL, 5)):
+        try:
+            os.killpg(pgid, sig)
+        except (ProcessLookupError, PermissionError):
+            return
+        try:
+            process.wait(timeout=wait_s)
+            return
+        except subprocess.TimeoutExpired:
+            continue
