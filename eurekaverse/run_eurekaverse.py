@@ -398,11 +398,12 @@ def restore_run(cfg):
     logging.info(f"Resuming experiment {run_id}, make sure you're running with the same config!")
 
     # Get the correct wandb id to resume
-    wandb_api = wandb.Api()
-    path_to_resume_project = f"{wandb_api.default_entity}/parkour" # Or your specific project if not "parkour"
-    runs = wandb_api.runs(path=path_to_resume_project, filters={"display_name": cfg.resume_run})
-    assert len(runs) == 1, f"Expected 1 wandb run, got {len(runs)} called {cfg.resume_run}!"
-    wandb_id = runs[0].id
+    if cfg.wandb:
+        wandb_api = wandb.Api()
+        path_to_resume_project = f"{wandb_api.default_entity}/parkour" # Or your specific project if not "parkour"
+        runs = wandb_api.runs(path=path_to_resume_project, filters={"display_name": cfg.resume_run})
+        assert len(runs) == 1, f"Expected 1 wandb run, got {len(runs)} called {cfg.resume_run}!"
+        wandb_id = runs[0].id
 
     # Check output directory for saved pickle files
     load_it = -1
