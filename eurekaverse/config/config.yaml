@@ -5,7 +5,7 @@ defaults:
 
 quadruped_model: "go2"                 # Robot model (our reproduction targets Unitree Go2)
 
-iterations: 5                          # Number of environment generation iterations (paper value; fork had 9)
+iterations: 8                          # 5 → 8: gpt-5.4 연장 런 (iteration 5~7 추가)
 train_iterations: 2000                 # Number of training iterations per generated environment (paper value; fork had 1500)
 eval_steps: 1001                       # Number of evaluation steps per environment (1001 is fairly accurate, 10001 is most accurate)
 num_terrain_types: 10                  # Number of terrains to generate
@@ -18,12 +18,12 @@ deterministic_gpu: True                # Deterministically assign training and e
 
 wandb: False                           # Use wandb tracking
 
-gpt_model: "gpt-5.4-mini"
+gpt_model: "gpt-5.4"                   # mini의 진화 보수화 문제로 풀 모델 승격 (docs/RUN_RESULTS.md)
 initial_query_sample_multiplier: 4     # Multiplier for the number of samples to query in first iteration (paper value)
 evolution_query_sample_multiplier: 4   # Multiplier for the number of samples to query in later iterations
 max_gpt_queries: 10                    # Maximum number of attempted GPT queries for a single prompt
 
-resume_run: ""      # Resume from a previous hydra run
+resume_run: "2026-07-06_12-22-44"      # 런 #1(5 iterations)에 이어붙임; 새 런 시작할 땐 ""로
 
 hydra:
   job:
