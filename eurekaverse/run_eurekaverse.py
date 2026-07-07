@@ -438,7 +438,15 @@ def restore_run(cfg):
         eval_testing_stats = pickle.load(f)
     with open(f"{output_dir}/eval_testing_stats_per_terrain_it-{load_it}.pkl", "rb") as f:
         eval_testing_stats_per_terrain = pickle.load(f)
-    
+
+    # Fan-out: resuming with more parallel runs than saved lineages branches new runs
+    # from the best saved lineage (they share history, then evolve independently)
+    best_saved_id = sorted(parallel_run_lineage.keys())[0]
+    for prid in range(cfg.num_parallel_runs):
+        if prid not in parallel_run_lineage:
+            parallel_run_lineage[prid] = list(parallel_run_lineage[best_saved_id])
+            logging.info(f"Fan-out: parallel run {prid} branched from saved lineage of run {best_saved_id}")
+
     start_it = load_it + 1
     return start_it
 
@@ -551,7 +559,8 @@ def main(cfg):
 
         # Start parallel runs, each serially running training and evaluation
         setup_training_all_terrains(it)
-        with ThreadPoolExecutor(max_workers=cfg.num_parallel_runs) as executor:
+        # Single-GPU: logical width (num_parallel_runs lineages) with capped concurrency
+        with ThreadPoolExecutor(max_workers=cfg.get("max_concurrent_runs", 1)) as executor:
             futures = []
             for parallel_run_id in range(cfg.num_parallel_runs):
                 futures.append(executor.submit(parallel_run, cfg, it, parallel_run_id, cfg.num_parallel_runs == 1))
