@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # 루프 진행 상황 한눈에 보기. 사용법: ./status.sh  (아무 터미널에서나, 실행에 영향 없음)
 OUT=$(ls -td ~/workspace/eurekaverse_lab3/eurekaverse/outputs/run_eurekaverse/*/ 2>/dev/null | head -1)
+# resume된 런이면 원래 런 폴더로 따라감
+if [ -f "$OUT/resumed_run.txt" ]; then
+    OUT=~/workspace/eurekaverse_lab3/eurekaverse/outputs/run_eurekaverse/$(cat "$OUT/resumed_run.txt")/
+fi
 LOOP=~/loop_production.log
 
 echo "══════════ Eurekaverse 루프 상태 ══════════"
