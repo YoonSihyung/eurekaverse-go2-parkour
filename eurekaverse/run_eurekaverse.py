@@ -440,12 +440,13 @@ def restore_run(cfg):
         eval_testing_stats_per_terrain = pickle.load(f)
 
     # Fan-out: resuming with more parallel runs than saved lineages branches new runs
-    # from the best saved lineage (they share history, then evolve independently)
-    best_saved_id = sorted(parallel_run_lineage.keys())[0]
+    # by cycling through saved lineages (preserves the winner/runner-up mix ratio)
+    saved_ids = sorted(parallel_run_lineage.keys())
     for prid in range(cfg.num_parallel_runs):
         if prid not in parallel_run_lineage:
-            parallel_run_lineage[prid] = list(parallel_run_lineage[best_saved_id])
-            logging.info(f"Fan-out: parallel run {prid} branched from saved lineage of run {best_saved_id}")
+            src = saved_ids[prid % len(saved_ids)]
+            parallel_run_lineage[prid] = list(parallel_run_lineage[src])
+            logging.info(f"Fan-out: parallel run {prid} branched from saved lineage of run {src}")
 
     start_it = load_it + 1
     return start_it

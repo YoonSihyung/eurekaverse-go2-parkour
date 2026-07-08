@@ -28,6 +28,7 @@ eurekaverse_lab3/
 - 환경(A)과 학습기(B)의 유일한 접점은 `env.step(actions) → (obs, reward, done, ...)`.
 - LLM 루프(C)는 A+B를 **CLI 서브프로세스 + 로그 문자열 파싱**으로만 조종합니다 (그래서 백엔드를 통째로 갈아치워도 루프가 삽니다).
 
+
 ### 층 A — 환경: `extreme-parkour/legged_gym/legged_gym/`
 
 | 파일 | 역할 |
