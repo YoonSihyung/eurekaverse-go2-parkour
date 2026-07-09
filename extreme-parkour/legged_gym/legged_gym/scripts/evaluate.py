@@ -57,6 +57,7 @@ parser = argparse.ArgumentParser()
 add_shared_args(parser)
 
 parser.add_argument("--video", action="store_true", default=False, help="Record videos of agent")
+parser.add_argument("--video_row_idxes", type=str, default="0,1,3,5,7", help="Comma-separated difficulty rows to place video cameras at (default matches original)")
 parser.add_argument("--num_terrain_types", type=int, help="Number of terrain types. Provided by run_eurekaverse.py and should match the number of set_terrain_fns in the generated set_terrain python file")
 
 parser.add_argument("--checkpoint", type=int, default=-1, help="Which model checkpoint to load. If -1, will load the last checkpoint.")
@@ -103,7 +104,7 @@ def validate_consecutive_tuples(tuples_list):
                     raise AssertionError(f"Tuple at index {i} is not consecutive: {item}")
     return True
 
-def get_camera_cfg(col_idx, row_idx, camera_name, env_id:int):
+def get_camera_cfg(col_idx, row_idx, camera_name, env_id:int, env_origin=None):
     """
     Add a camera configuration to the environment config for a specific terrain cell.
     
@@ -113,13 +114,13 @@ def get_camera_cfg(col_idx, row_idx, camera_name, env_id:int):
         row_idx: Row index in the terrain grid
         camera_name: Optional name for the camera (defaults to "cam_r{row}_c{col}")
     """
-    cam_offset_dict = get_camera_coords(col_idx, row_idx)
+    cam_offset_dict = get_camera_coords(col_idx, row_idx, env_origin)
 
     cam_cfg = CameraCfg(
         prim_path=f"/World/envs/env_{env_id}/{camera_name}",
-        update_period=0.1,
-        height=272,
-        width=544,
+        update_period=0.0,
+        height=540,
+        width=960,
         data_types=['rgb'],
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0,
@@ -233,7 +234,7 @@ def evaluate(args):
         print("[INFO] Recording videos during training.")
 
         camera_col_idxes = list(range(env_cfg.terrain.num_cols))
-        camera_row_idxes = [0, 1, 3, 5, 7]
+        camera_row_idxes = [int(r) for r in args.video_row_idxes.split(",")]
 
         validate_consecutive_tuples(camera_col_idxes)
         validate_consecutive_tuples(camera_row_idxes)
@@ -275,8 +276,9 @@ def evaluate(args):
             # cameras are no longer tiled; should be matching one env per cam
             assert len(row_range) == 1 and len(col_range) == 1, f"Expected exactly one row and one column for camera {cam_name}, but got {len(row_range)} rows and {len(col_range)} columns"
             
-            # now get camera cfg and spawn cam into the scene
-            cam_cfg = get_camera_cfg(col_range[0], row_range[0], cam_name, matched_env_id)
+            # now get camera cfg and spawn cam into the scene (pose computed from the cell's actual origin)
+            matched_origin = env.scene._terrain.env_origins[matched_env_id].cpu().numpy()
+            cam_cfg = get_camera_cfg(col_range[0], row_range[0], cam_name, matched_env_id, matched_origin)
             env.scene.sensors[cam_name] = SingleEnvCamera(cam_cfg)
 
             # we are creating a sensor after scene initialization, so we have to replaicate what

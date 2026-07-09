@@ -1,7 +1,9 @@
 import imageio
 import os
 import gymnasium as gym
+import numpy as np
 import torch
+from scipy.spatial.transform import Rotation
 
 
 class MultiCamVideo(gym.Wrapper):
@@ -22,11 +24,8 @@ class MultiCamVideo(gym.Wrapper):
 
         if self.frame < self.len:
             for cam_name in self.cam_names:
-                # if cam_name == "cam_0r_c0":
-                #     print(self.env.scene.sensors[cam_name]._ALL_INDICES)
                 image = self.env.scene.sensors[cam_name].data.output["rgb"].squeeze(0)
                 assert len(image.shape) == 3, f"Expected image shape to be 3D, got {image.shape}"
-                # print(f"Received {image.shape} from {cam_name}")
                 self.writers[cam_name].append_data(image.cpu().numpy().astype("uint8"))
 
         self.frame += 1
@@ -39,26 +38,30 @@ class MultiCamVideo(gym.Wrapper):
         super().close()
 
 
-def get_camera_coords(col_idx, row_idx, cam_height=5.75):
+def get_camera_coords(col_idx, row_idx, env_origin, terrain_length=18.0, cam_height=6.5, side_offset=-11.5):
     """
-    Get camera position and rotation parameters for a specific terrain cell.
-    
-    Args:
-        col_idx: Column index in the terrain grid
-        row_idx: Row index in the terrain grid
-        
-    Returns:
-        dict: Camera configuration with position and rotation
-    """
+    Camera pose for one terrain cell, computed from the cell's actual env origin.
 
-    all_configs = {}
-    for x in range(10):
-        for y in range(8):
-            all_configs[(x, y)] = ((-13.5, 11.5, cam_height), (1.0, 0.0, 0.25, 0.0))
+    Elevated side view covering the whole course: positioned to the -y side of the
+    cell, centered along the course (+x) direction, looking at the course center.
+    Rotation is returned as (x, y, z, w) matching Isaac Lab 3.0's quaternion order,
+    for a camera in "world" convention (x-forward, y-left, z-up).
+    """
+    ox, oy, oz = float(env_origin[0]), float(env_origin[1]), float(env_origin[2])
+    course_center_x = ox + terrain_length / 2 - 1.0  # origin sits ~1m into the cell
+
+    pos = (course_center_x, oy + side_offset, oz + cam_height)
+    target = (course_center_x, oy, oz + 0.5)
+
+    f = np.array(target) - np.array(pos)
+    f = f / np.linalg.norm(f)                    # camera x-axis (forward)
+    left = np.cross(np.array([0.0, 0.0, 1.0]), f)
+    left = left / np.linalg.norm(left)           # camera y-axis (left)
+    up = np.cross(f, left)                       # camera z-axis (up)
+    rot_mat = np.column_stack([f, left, up])
+    quat_xyzw = Rotation.from_matrix(rot_mat).as_quat()
 
     return {
-        "position": all_configs[(col_idx, row_idx)][0],
-        "rotation": all_configs[(col_idx, row_idx)][1]
+        "position": pos,
+        "rotation": tuple(quat_xyzw),
     }
-    
-    return camera_config
