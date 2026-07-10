@@ -69,3 +69,20 @@ iteration 7 정책에서 4계보 fan-out, all-training(합집합 40지형) 채�
 - iteration 9 정체 원인: 4계보 모두 pre 7.15~7.43로 시작 — **진화 난이도가 정책 성장 속도를 미추종** (선택압으로 해결 안 되는 병목 확인)
 - 다음 개입 후보: 진화 프롬프트 난이도 앵커(높이 0.4~0.6m, 갭 0.6~0.8m 명시) 후 iterations 12 연장
 - 비용: 폭4 런 $8.03 (프로젝트 총 ~$12)
+
+---
+
+# M6 depth 증류 (2026-07-10)
+
+- 공진화 종료 결정 (iterations 0~10, 최고 teacher `_10_3` 벤치마크 4.48)
+- student `_10_3_distill`: DAgger 2000 iters, it-10 지형, 192 env + TiledCamera depth (90×60, 2m 클립, D435i 마운트), 3.5h
+- 편차: action_delay 미이식 (실기 배포 시 필요)
+
+| 환경 | teacher (scandots) | student (depth) | 비율 |
+|---|---|---|---|
+| it-5 지형 | 7.70 | 6.11 | 79% |
+| it-8 지형 | 6.86 | 4.05 | 59% |
+| **벤치마크** | **4.48** | **3.72** | **83%** ✓ (기준 ~80%) |
+
+- Isaac Lab 3.0 이식에서 잡은 버그: learn_vision 구 step 시그니처, 평가 depth 차단막, 래퍼 depth_buffer 접근, **"첫 카메라가 depth 전용이면 RGB 렌더 패스가 전역 비활성"** (영상+depth 공존의 근본 원인), RenderContext 센서 prim 수 일치 제약
+- 영상: videos/student/ (it-5·it-8 지형 8클립) + benchmark_compare/student3.72_* (10클립) — 전 영상 동일 3/4 구도
