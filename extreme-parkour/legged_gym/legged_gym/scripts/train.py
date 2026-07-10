@@ -61,6 +61,8 @@ if not args.headless and not args.gui:
     args.headless = True
 
 args.script = "train"
+if args.use_camera:
+    args.enable_cameras = True
 app_launcher = AppLauncher(args)
 simulation_app = app_launcher.app
 

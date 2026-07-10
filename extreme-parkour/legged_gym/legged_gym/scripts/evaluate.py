@@ -86,7 +86,7 @@ args = parser.parse_args()
 #         args.num_envs = args.terrain_rows * args.terrain_cols
 
 args.script = "evaluate"
-if args.video:
+if args.video or args.use_camera:
     args.enable_cameras = True
 app_launcher = AppLauncher(args)
 simulation_app = app_launcher.app

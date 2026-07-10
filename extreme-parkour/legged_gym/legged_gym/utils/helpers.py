@@ -96,6 +96,18 @@ def update_cfg_from_args(env_cfg, cfg_train, args):
             env_cfg.terrain.type = args.terrain_type
         if args.check_terrain_feasibility:
             env_cfg.terrain.check_feasibility = True
+
+        # Depth-camera distillation setup (mirrors the original helpers): rendering
+        # 192 cameras is expensive, so shrink env count and terrain grid. Explicit
+        # --num_envs/--num_rows/--num_cols below still override these defaults.
+        if getattr(args, "use_camera", False):
+            env_cfg.depth.use_camera = True
+            if args.num_envs is None:
+                env_cfg.scene.num_envs = env_cfg.depth.camera_num_envs
+            if args.num_rows is None:
+                env_cfg.terrain.num_rows = env_cfg.depth.camera_terrain_num_rows
+            if args.num_cols is None:
+                env_cfg.terrain.num_cols = env_cfg.depth.camera_terrain_num_cols
         
         if hasattr(args, "video"):
             env_cfg.video = args.video
@@ -125,6 +137,8 @@ def update_cfg_from_args(env_cfg, cfg_train, args):
     if cfg_train is not None and args.script == "train":
         if args.seed is not None:
             cfg_train.seed = args.seed
+        if getattr(args, "use_camera", False):
+            cfg_train.depth_encoder.if_depth = True
         # alg runner parameters
         if args.max_iterations is not None:
             cfg_train.runner.max_iterations = args.max_iterations

@@ -37,6 +37,7 @@ import os
 from isaaclab.envs import DirectRLEnv
 import isaaclab.sim as sim_utils
 from isaaclab.assets.articulation import Articulation
+from isaaclab.sensors import TiledCamera, TiledCameraCfg
 from isaaclab.utils.math import quat_rotate_inverse, quat_apply, quat_from_euler_xyz, quat_apply_yaw, wrap_to_pi
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR, ISAAC_NUCLEUS_DIR
@@ -278,31 +279,23 @@ class LeggedRobot(DirectRLEnv):
     def update_depth_buffer(self):
         if not self.cfg.depth.use_camera:
             return
-        else:
-            raise NotImplementedError("Depth camera not implemented in Isaac Lab")
-
         if self.global_counter % self.cfg.depth.update_interval != 0:
             return
-        self.gym.step_graphics(self.sim) # required to render in headless mode
-        self.gym.render_all_camera_sensors(self.sim)
-        self.gym.start_access_image_tensors(self.sim)
 
+        # TiledCamera output: [num_envs, H, W, 1] positive distances (inf on miss).
+        # The Isaac Gym pipeline expected negative depth (it multiplies by -1 in
+        # process_depth_image), so negate to keep the processing chain identical.
+        depth_all = self.scene.sensors["depth_cam"].data.output["distance_to_image_plane"]
+        depth_all = -depth_all.squeeze(-1)
+        depth_all = torch.nan_to_num(depth_all, nan=0.0, posinf=0.0, neginf=-1e6)
+
+        init_flag = self.episode_length_buf <= 1
         for i in range(self.num_envs):
-            depth_image_ = self.gym.get_camera_image_gpu_tensor(self.sim, 
-                                                                self.envs[i], 
-                                                                self.cam_handles[i],
-                                                                gymapi.IMAGE_DEPTH)
-            
-            depth_image = gymtorch.wrap_tensor(depth_image_)
-            depth_image = self.process_depth_image(depth_image, i)
-
-            init_flag = self.episode_length_buf <= 1
+            depth_image = self.process_depth_image(depth_all[i], i)
             if init_flag[i]:
                 self.depth_buffer[i] = torch.stack([depth_image] * self.cfg.depth.depth_buf_len, dim=0)
             else:
                 self.depth_buffer[i] = torch.cat([self.depth_buffer[i, 1:], depth_image.to(self.device).unsqueeze(0)], dim=0)
-
-        self.gym.end_access_image_tensors(self.sim)
 
     def _update_goals(self):
         # Delay the goal reach by self.cfg.env.reach_goal_delay seconds
@@ -879,28 +872,37 @@ class LeggedRobot(DirectRLEnv):
         self.x_edge_mask = torch.tensor(self.terrain.x_edge_mask).view(self.terrain.tot_rows, self.terrain.tot_cols).to(self.device)
 
     def attach_camera_to_robot(self):
-        if self.cfg.depth.use_camera:
-            # config = self.cfg.depth
-            # camera_props = gymapi.CameraProperties()
-            # camera_props.width, camera_props.height = self.cfg.depth.original_resolution
-            # camera_props.enable_tensors = True
-            # camera_horizontal_fov = self.cfg.depth.horizontal_fov 
-            # camera_props.horizontal_fov = camera_horizontal_fov
+        """Isaac Lab 3.0 port of the Isaac Gym per-env depth camera.
 
-            # camera_handle = self.gym.create_camera_sensor(env_handle, camera_props)
-            # self.cam_handles.append(camera_handle)
-            
-            # local_transform = gymapi.Transform()
-            
-            # camera_position = np.random.normal(config.position["mean"], config.position["std"])
-            # camera_rotation = np.random.normal(config.rotation["mean"], config.rotation["std"])
-            # local_transform.p = gymapi.Vec3(*camera_position)
-            # local_transform.r = gymapi.Quat.from_euler_zyx(*camera_rotation)
-            # root_handle = self.gym.get_actor_root_rigid_body_handle(env_handle, actor_handle)
-            
-            # self.gym.attach_camera_to_body(camera_handle, env_handle, root_handle, local_transform, gymapi.FOLLOW_TRANSFORM)
-
-            raise NotImplementedError
+        A TiledCamera is attached to every robot's base link at the D435i mount pose
+        from cfg.depth (Parkour Learning mount, pitched down). The tiny per-env mount
+        jitter of the original (std ~2mm / 0.6deg) is dropped — TiledCamera shares one
+        offset across envs.
+        """
+        if not self.cfg.depth.use_camera:
+            return
+        config = self.cfg.depth
+        width, height = config.original_resolution
+        # horizontal FOV -> focal length for the default 20.955mm aperture
+        aperture = 20.955
+        focal = aperture / (2 * np.tan(np.radians(config.horizontal_fov) / 2))
+        # mount pitch (rad, down) about +y; quaternion in Isaac Lab 3.0 (x, y, z, w) order
+        pitch = config.rotation["mean"][1]
+        quat_xyzw = tuple(R.from_euler("y", pitch).as_quat())
+        cam_cfg = TiledCameraCfg(
+            prim_path="/World/envs/env_.*/Robot/base/front_cam",
+            offset=TiledCameraCfg.OffsetCfg(
+                pos=tuple(config.position["mean"]), rot=quat_xyzw, convention="world"
+            ),
+            data_types=["distance_to_image_plane"],
+            spawn=sim_utils.PinholeCameraCfg(
+                focal_length=focal, horizontal_aperture=aperture,
+                clipping_range=(0.05, 20.0),
+            ),
+            width=width, height=height,
+            update_period=config.update_interval * self.cfg.sim.dt * self.cfg.decimation,
+        )
+        self.scene.sensors["depth_cam"] = TiledCamera(cam_cfg)
 
     def _init_robot(self):
         """ Creates environments:
@@ -916,8 +918,8 @@ class LeggedRobot(DirectRLEnv):
         """
         # add Go1 to scene
         self._robot = Articulation(self.cfg.robot)
-        self.attach_camera_to_robot()
         self.scene.articulations["robot"] = self._robot
+        self.attach_camera_to_robot()
 
         # base_init_state_list = self.cfg.init_state.pos + self.cfg.init_state.rot + self.cfg.init_state.lin_vel + self.cfg.init_state.ang_vel
         # self.base_init_state = to_torch(base_init_state_list, device=self.device, requires_grad=False)

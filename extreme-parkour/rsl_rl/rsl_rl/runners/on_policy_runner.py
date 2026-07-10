@@ -76,8 +76,7 @@ class OnPolicyRunner:
         # Depth encoder
         self.if_depth = self.depth_encoder_cfg["if_depth"]
         if self.if_depth:
-            raise NotImplementedError("Depth not ported to Lab")
-            depth_backbone = DepthOnlyFCBackbone58x87(self.env_cfg.env.n_proprio, 
+            depth_backbone = DepthOnlyFCBackbone58x87(self.env_cfg.env.n_proprio,
                                                     self.policy_cfg["scan_encoder_dims"][-1], 
                                                     self.depth_encoder_cfg["hidden_dims"],
                                                     )
@@ -205,7 +204,7 @@ class OnPolicyRunner:
         self.current_learning_iteration = self.end_learning_iteration
         self.save(os.path.join(self.log_dir, 'model_{}.pt'.format(self.current_learning_iteration)))
 
-    def learn_vision(self, num_learning_iterations, init_at_random_ep_len=False):
+    def learn_vision(self, num_learning_iterations, init_at_random_ep_len=False, web_viewer=None):
         if init_at_random_ep_len:
             self.env.episode_length_buf = torch.randint_like(self.env.episode_length_buf, high=int(self.env.max_episode_length))
 
