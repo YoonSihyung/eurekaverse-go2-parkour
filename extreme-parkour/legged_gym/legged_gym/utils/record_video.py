@@ -38,25 +38,20 @@ class MultiCamVideo(gym.Wrapper):
         super().close()
 
 
-def get_camera_coords(col_idx, row_idx, env_origin, terrain_length=18.0, cam_height=8.5, side_offset=-7.5):
-    # Steeper, closer side view: crosses at most one neighboring 4m column, so tall
-    # obstacles in adjacent courses can't occlude the target course.
+def get_camera_coords(col_idx, row_idx, env_origin, terrain_length=18.0, cam_height=3.2, back_offset=-3.5):
     """
     Camera pose for one terrain cell, computed from the cell's actual env origin.
 
-    Elevated side view covering the whole course: positioned to the -y side of the
-    cell, centered along the course (+x) direction, looking at the course center.
+    Behind-the-spawn view looking down the course (+x): stays inside the cell's own
+    4m-wide corridor, so tall obstacles in neighboring columns can never occlude it.
+    Robots walk away from the camera with obstacles readable in depth.
     Rotation is returned as (x, y, z, w) matching Isaac Lab 3.0's quaternion order,
     for a camera in "world" convention (x-forward, y-left, z-up).
     """
     ox, oy, oz = float(env_origin[0]), float(env_origin[1]), float(env_origin[2])
-    # Aim at the spawn-to-midcourse stretch (x ∈ [origin-1, origin+10]) — on hard
-    # difficulties robots rarely pass midcourse, so centering on the full course
-    # leaves them out of frame.
-    course_center_x = ox + 4.5
 
-    pos = (course_center_x, oy + side_offset, oz + cam_height)
-    target = (course_center_x, oy, oz + 0.5)
+    pos = (ox + back_offset, oy, oz + cam_height)
+    target = (ox + 6.5, oy, oz + 0.3)
 
     f = np.array(target) - np.array(pos)
     f = f / np.linalg.norm(f)                    # camera x-axis (forward)
