@@ -3,6 +3,7 @@
 # 사용법: ~/workspace/eurekaverse_lab3/resume_and_videos.sh
 rm -f /dev/shm/sem.carbonite-sharedmemory /dev/shm/carb-RStringInternals-* /dev/shm/sem.carb-RStringInternals-*
 setsid bash -c '
+    source ~/.bashrc 2>/dev/null
     cd ~/workspace/eurekaverse_lab3/eurekaverse
     ~/miniconda3/envs/eureka_lab6/bin/python -u run_eurekaverse.py > ~/loop_production.log 2>&1
     echo "[$(date)] 루프 종료 (exit $?), 영상 배치 시작" >> ~/loop_production.log
