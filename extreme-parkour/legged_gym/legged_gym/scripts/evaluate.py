@@ -263,29 +263,55 @@ def evaluate(args):
 
             return list(range(inclusive_row_range[0], inclusive_row_range[1] + 1)), list(range(inclusive_col_range[0], inclusive_col_range[1] + 1))
 
-        cam_name_to_env_ids = {}
+        cam_name_to_env_id = {}
         for cam_name in cam_names:
             row_range, col_range = cam_name_to_matched_rows_and_cols(cam_name)
             print(cam_name, row_range, col_range)
             mask = torch.isin(env.terrain_types.cpu(), torch.tensor(col_range)) & torch.isin(env.terrain_levels.cpu(), torch.tensor(row_range))
             matched_env_id = int(torch.nonzero(mask).squeeze())
-
-            # print(f"Matched env ID {matched_env_id} with rows {row_range} and cols {col_range} to cam {cam_name}")
-
             # cameras are no longer tiled; should be matching one env per cam
             assert len(row_range) == 1 and len(col_range) == 1, f"Expected exactly one row and one column for camera {cam_name}, but got {len(row_range)} rows and {len(col_range)} columns"
-            
-            # now get camera cfg and spawn cam into the scene (pose computed from the cell's actual origin)
-            matched_origin = env.scene._terrain.env_origins[matched_env_id].cpu().numpy()
-            cam_cfg = get_camera_cfg(col_range[0], row_range[0], cam_name, matched_env_id, matched_origin)
-            env.scene.sensors[cam_name] = SingleEnvCamera(cam_cfg)
+            cam_name_to_env_id[cam_name] = matched_env_id
 
-            # we are creating a sensor after scene initialization, so we have to replaicate what
-            # the InteractiveScene does upon initializing a sensor
-            env.scene.sensors[cam_name]._initialize_impl()
-            env.scene.sensors[cam_name]._is_initialized = True
-
-        env = MultiCamVideo(env, video_out_dir, cam_names)
+        if env_cfg.depth.use_camera:
+            # The global RenderContext requires every camera sensor to have the same
+            # prim count. With the per-robot depth camera active (num_envs prims),
+            # single-prim viz cameras are rejected — so build ONE batched viz sensor
+            # with a camera per env, posed at each env's own terrain-cell 3/4 view,
+            # and record only the labeled env indices.
+            viz_cfg = CameraCfg(
+                prim_path="/World/envs/env_.*/viz_cam",
+                offset=CameraCfg.OffsetCfg(pos=(0.0, 0.0, 50.0), rot=(0.0, 0.0, 0.0, 1.0), convention="world"),
+                data_types=["rgb"],
+                spawn=sim_utils.PinholeCameraCfg(
+                    focal_length=24.0, focus_distance=20.0, horizontal_aperture=20.955,
+                    clipping_range=(0.1, 1000.0), visible=False,
+                ),
+                width=960, height=540, update_period=0.0,
+            )
+            viz = Camera(viz_cfg)
+            env.scene.sensors["viz_cams"] = viz
+            viz._initialize_impl()
+            viz._is_initialized = True
+            origins = env.scene._terrain.env_origins.to(env.device)
+            eyes = origins + torch.tensor([10.0, 6.0, 6.0], device=env.device)
+            targets = origins + torch.tensor([4.0, 0.0, 0.3], device=env.device)
+            viz.set_world_poses_from_view(eyes, targets)
+            env = MultiCamVideo(env, video_out_dir, cam_names,
+                                cam_specs=cam_name_to_env_id, sensor_key="viz_cams")
+        else:
+            for cam_name in cam_names:
+                row_range, col_range = cam_name_to_matched_rows_and_cols(cam_name)
+                matched_env_id = cam_name_to_env_id[cam_name]
+                # camera cfg + spawn into the scene (pose computed from the cell's actual origin)
+                matched_origin = env.scene._terrain.env_origins[matched_env_id].cpu().numpy()
+                cam_cfg = get_camera_cfg(col_range[0], row_range[0], cam_name, matched_env_id, matched_origin)
+                env.scene.sensors[cam_name] = SingleEnvCamera(cam_cfg)
+                # we are creating a sensor after scene initialization, so we have to replicate what
+                # the InteractiveScene does upon initializing a sensor
+                env.scene.sensors[cam_name]._initialize_impl()
+                env.scene.sensors[cam_name]._is_initialized = True
+            env = MultiCamVideo(env, video_out_dir, cam_names)
 
     total_steps = args.max_steps if (args.max_steps is not None and args.max_steps > 0) else 10 * int(max_episode_length)
 

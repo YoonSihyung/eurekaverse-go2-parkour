@@ -7,12 +7,16 @@ from scipy.spatial.transform import Rotation
 
 
 class MultiCamVideo(gym.Wrapper):
-    def __init__(self, env, out_dir, cam_names:list, fps=30, length=float("inf")):
+    def __init__(self, env, out_dir, cam_names:list, fps=30, length=float("inf"),
+                 cam_specs:dict=None, sensor_key:str=None):
+        """cam_specs: optional {cam_name: env_index} for a single batched viz sensor
+        (sensor_key); when None, each cam_name is its own single-prim sensor."""
         super().__init__(env)
         self.out_dir, self.fps = out_dir, fps
         self.len = length
         os.makedirs(out_dir, exist_ok=True)
         self.cam_names = cam_names
+        self.cam_specs, self.sensor_key = cam_specs, sensor_key
         self.writers = {
             cam_name: imageio.get_writer(f"{self.out_dir}/{cam_name}.mp4", fps=self.fps)
             for cam_name in cam_names
@@ -23,8 +27,12 @@ class MultiCamVideo(gym.Wrapper):
         obs, r, term, trunc, info = self.env.step(action)
 
         if self.frame < self.len:
+            batched = self.env.scene.sensors[self.sensor_key].data.output["rgb"] if self.cam_specs else None
             for cam_name in self.cam_names:
-                image = self.env.scene.sensors[cam_name].data.output["rgb"].squeeze(0)
+                if self.cam_specs:
+                    image = batched[self.cam_specs[cam_name]]
+                else:
+                    image = self.env.scene.sensors[cam_name].data.output["rgb"].squeeze(0)
                 assert len(image.shape) == 3, f"Expected image shape to be 3D, got {image.shape}"
                 self.writers[cam_name].append_data(image.cpu().numpy().astype("uint8"))
 
