@@ -208,8 +208,9 @@ def evaluate(args):
         env_cfg.sim.physics.gpu_max_rigid_patch_count, 2**21)
 
     # Third-person viz cameras must be created at scene-build time (post-init batched
-    # sensors never render); the env creates them when this flag is set.
-    if args.video and env_cfg.depth.use_camera:
+    # sensors never render); the env creates them when this flag is set. With a single
+    # env the proven single-prim camera path is used instead (equal prim counts).
+    if args.video and env_cfg.depth.use_camera and env_cfg.scene.num_envs > 1:
         env_cfg.viz_cams = True
 
     # If showing window, allow user to control command velocity to 0
@@ -273,7 +274,7 @@ def evaluate(args):
             assert len(row_range) == 1 and len(col_range) == 1, f"Expected exactly one row and one column for camera {cam_name}, but got {len(row_range)} rows and {len(col_range)} columns"
             cam_name_to_env_id[cam_name] = matched_env_id
 
-        if env_cfg.depth.use_camera:
+        if env_cfg.depth.use_camera and env_cfg.scene.num_envs > 1:
             # The global RenderContext requires every camera sensor to have the same
             # prim count. With the per-robot depth camera active (num_envs prims),
             # single-prim viz cameras are rejected — so build ONE batched viz sensor
