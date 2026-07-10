@@ -352,7 +352,7 @@ def evaluate(args):
     actions = torch.zeros(env_cfg.scene.num_envs, 12, device=device, requires_grad=False)
     if env_cfg.depth.use_camera:
         infos = {
-            "depth": env.depth_buffer.clone().cuda()[:, -1]
+            "depth": env.unwrapped.depth_buffer.clone().cuda()[:, -1]
         }
         depth_latent = None
     
