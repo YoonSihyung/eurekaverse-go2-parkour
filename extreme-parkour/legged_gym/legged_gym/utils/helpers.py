@@ -133,6 +133,10 @@ def update_cfg_from_args(env_cfg, cfg_train, args):
             env_cfg.terrain.num_rows = args.num_rows
         if args.num_goals is not None:
             env_cfg.terrain.num_goals = args.num_goals
+        if getattr(args, "fixed_difficulty", None) is not None:
+            env_cfg.terrain.fixed_difficulty = args.fixed_difficulty
+        if getattr(args, "fixed_variation", None) is not None:
+            env_cfg.terrain.fixed_variation = args.fixed_variation
 
     if cfg_train is not None and args.script == "train":
         if args.seed is not None:
@@ -178,6 +182,8 @@ def add_terrain_args(parser):
     parser.add_argument("--num_cols", type=int, help="")
     parser.add_argument("--num_rows", type=int, help="")
     parser.add_argument("--num_goals", type=int, help="")
+    parser.add_argument("--fixed_difficulty", type=float, help="Force all terrain rows to this difficulty (for 1x1 video grids)")
+    parser.add_argument("--fixed_variation", type=float, help="Force all terrain cols to this variation (for 1x1 video grids)")
     parser.add_argument("--check_terrain_feasibility", action="store_true", default=False, help="Check terrain feasibility with simple heuristics")
 
 def add_shared_args(parser):

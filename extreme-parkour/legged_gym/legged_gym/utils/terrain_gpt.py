@@ -159,6 +159,12 @@ class Terrain:
             for i in range(self.cfg.num_rows):
                 difficulty = i / (self.cfg.num_rows-1) if self.cfg.num_rows > 1 else 0.5
                 variation = j / self.cfg.num_cols
+                # Optional overrides for tiny (e.g. 1x1) video/eval grids where the
+                # row/col position can no longer select difficulty or terrain type.
+                if getattr(self.cfg, "fixed_difficulty", None) is not None:
+                    difficulty = float(self.cfg.fixed_difficulty)
+                if getattr(self.cfg, "fixed_variation", None) is not None:
+                    variation = float(self.cfg.fixed_variation)
                 terrain = self.make_terrain(variation, difficulty)
                 
                 # Pad borders
