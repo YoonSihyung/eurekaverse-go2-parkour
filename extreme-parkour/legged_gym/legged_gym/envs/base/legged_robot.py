@@ -37,7 +37,7 @@ import os
 from isaaclab.envs import DirectRLEnv
 import isaaclab.sim as sim_utils
 from isaaclab.assets.articulation import Articulation
-from isaaclab.sensors import TiledCamera, TiledCameraCfg
+from isaaclab.sensors import TiledCamera, TiledCameraCfg, Camera, CameraCfg
 from isaaclab.utils.math import quat_rotate_inverse, quat_apply, quat_from_euler_xyz, quat_apply_yaw, wrap_to_pi
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR, ISAAC_NUCLEUS_DIR
@@ -890,9 +890,10 @@ class LeggedRobot(DirectRLEnv):
         # mount pitch (rad, down) about +y; quaternion in Isaac Lab 3.0 (x, y, z, w) order
         pitch = config.rotation["mean"][1]
         quat_xyzw = tuple(R.from_euler("y", pitch).as_quat())
-        cam_cfg = TiledCameraCfg(
+        cam_cls, cfg_cls = (TiledCamera, TiledCameraCfg) if getattr(config, "use_tiled_camera", True) else (Camera, CameraCfg)
+        cam_cfg = cfg_cls(
             prim_path="/World/envs/env_.*/Robot/base/front_cam",
-            offset=TiledCameraCfg.OffsetCfg(
+            offset=cfg_cls.OffsetCfg(
                 pos=tuple(config.position["mean"]), rot=quat_xyzw, convention="world"
             ),
             data_types=["distance_to_image_plane"],
@@ -903,7 +904,7 @@ class LeggedRobot(DirectRLEnv):
             width=width, height=height,
             update_period=config.update_interval * self.cfg.sim.dt * self.cfg.decimation,
         )
-        self.scene.sensors["depth_cam"] = TiledCamera(cam_cfg)
+        self.scene.sensors["depth_cam"] = cam_cls(cam_cfg)
 
     def _init_robot(self):
         """ Creates environments:

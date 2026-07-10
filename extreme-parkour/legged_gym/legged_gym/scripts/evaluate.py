@@ -207,6 +207,11 @@ def evaluate(args):
     env_cfg.sim.physics.gpu_max_rigid_patch_count = max(
         env_cfg.sim.physics.gpu_max_rigid_patch_count, 2**21)
 
+    # TiledCamera and plain Camera cannot share a render context (num_envs mismatch),
+    # so when recording videos alongside the robot depth camera, use plain Cameras.
+    if args.video and env_cfg.depth.use_camera:
+        env_cfg.depth.use_tiled_camera = False
+
     # If showing window, allow user to control command velocity to 0
     # This should not be used for headless evaluation since it will affect the results
     if not args.headless:
@@ -311,7 +316,6 @@ def evaluate(args):
         ppo_runner, train_cfg, _, loaded_dir, checkpoint = task_registry.make_alg_runner(env=env, args=args, name=args.task, train_cfg=train_cfg, log_root=load_dir)
         assert load_dir == loaded_dir, f"Config loading directory {load_dir} is different from the runner loading directory {loaded_dir}!"
         if env_cfg.depth.use_camera:
-            raise NotImplementedError("Depth actor not ported to Lab")
             policy = ppo_runner.get_depth_actor_inference_policy(device=device)
             if env_cfg.depth.use_camera:
                 depth_encoder = ppo_runner.get_depth_encoder_inference_policy(device=device)

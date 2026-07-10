@@ -192,6 +192,7 @@ class CustomEnvCfg:
 
 class CustomDepthCfg:
     use_camera = False
+    use_tiled_camera = True   # TiledCamera는 빠르지만 일반 Camera(영상용 뷰 카메라)와 혼용 불가 — 영상 녹화 시 False로
     camera_num_envs = 192
     camera_terrain_num_rows = 10
     camera_terrain_num_cols = 20
