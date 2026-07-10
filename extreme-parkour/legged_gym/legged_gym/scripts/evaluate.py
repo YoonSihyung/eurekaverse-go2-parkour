@@ -212,6 +212,10 @@ def evaluate(args):
     # env the proven single-prim camera path is used instead (equal prim counts).
     if args.video and env_cfg.depth.use_camera and env_cfg.scene.num_envs > 1:
         env_cfg.viz_cams = True
+    # A TiledCamera in the scene silences plain RGB Cameras on this stack; for video
+    # runs make the depth camera a plain Camera too (matches the proven viz path).
+    if args.video and env_cfg.depth.use_camera:
+        env_cfg.depth.use_tiled_camera = False
 
     # If showing window, allow user to control command velocity to 0
     # This should not be used for headless evaluation since it will affect the results

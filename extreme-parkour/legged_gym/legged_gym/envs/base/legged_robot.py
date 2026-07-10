@@ -289,6 +289,9 @@ class LeggedRobot(DirectRLEnv):
         depth_all = self.scene.sensors["depth_cam"].data.output["distance_to_image_plane"]
         depth_all = -depth_all.squeeze(-1)
         depth_all = torch.nan_to_num(depth_all, nan=0.0, posinf=0.0, neginf=-1e6)
+        if os.environ.get("DEPTH_DEBUG"):
+            raw = depth_all[0]
+            print(f"[DEPTH_DEBUG] step={self.global_counter} env0 raw: min={raw.min():.3f} max={raw.max():.3f} std={raw.std():.4f}")
 
         init_flag = self.episode_length_buf <= 1
         for i in range(self.num_envs):
@@ -891,12 +894,18 @@ class LeggedRobot(DirectRLEnv):
         pitch = config.rotation["mean"][1]
         quat_xyzw = tuple(R.from_euler("y", pitch).as_quat())
         cam_cls, cfg_cls = (TiledCamera, TiledCameraCfg) if getattr(config, "use_tiled_camera", True) else (Camera, CameraCfg)
+        # When third-person viz cameras will also record RGB, the first-initialized
+        # camera must request "rgb" too — otherwise the render pipeline is configured
+        # depth-only and later RGB cameras output black frames.
+        depth_data_types = ["distance_to_image_plane"]
+        if getattr(self.cfg, "viz_cams", False) or getattr(self.cfg, "video", False):
+            depth_data_types = ["rgb", "distance_to_image_plane"]
         cam_cfg = cfg_cls(
             prim_path="/World/envs/env_.*/Robot/base/front_cam",
             offset=cfg_cls.OffsetCfg(
                 pos=tuple(config.position["mean"]), rot=quat_xyzw, convention="world"
             ),
-            data_types=["distance_to_image_plane"],
+            data_types=depth_data_types,
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=focal, horizontal_aperture=aperture,
                 clipping_range=(0.05, 20.0),
