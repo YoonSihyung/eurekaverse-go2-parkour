@@ -271,9 +271,11 @@ class OnPolicyRunner:
 
                 # detach actions before feeding the env
                 if it < num_pretrain_iter:
-                    obs, privileged_obs, rewards, dones, infos = self.env.step(actions_teacher.detach())
+                    all_obs, rewards, reset_term, reset_time_out, infos = self.env.step(actions_teacher.detach())
                 else:
-                    obs, privileged_obs, rewards, dones, infos = self.env.step(actions_student.detach())
+                    all_obs, rewards, reset_term, reset_time_out, infos = self.env.step(actions_student.detach())
+                dones = reset_term | reset_time_out
+                obs, privileged_obs = all_obs
                 critic_obs = privileged_obs if privileged_obs is not None else obs
                 obs, critic_obs, rewards, dones = obs.to(self.device), critic_obs.to(self.device), rewards.to(self.device), dones.to(self.device)
 

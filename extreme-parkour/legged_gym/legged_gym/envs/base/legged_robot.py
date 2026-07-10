@@ -43,6 +43,7 @@ from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR, ISAAC_NUCLEUS_DIR
 
 import torch
+import torchvision
 from torch import Tensor
 from typing import Tuple, Dict
 
