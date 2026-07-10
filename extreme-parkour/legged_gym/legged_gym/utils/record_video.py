@@ -48,7 +48,10 @@ def get_camera_coords(col_idx, row_idx, env_origin, terrain_length=18.0, cam_hei
     for a camera in "world" convention (x-forward, y-left, z-up).
     """
     ox, oy, oz = float(env_origin[0]), float(env_origin[1]), float(env_origin[2])
-    course_center_x = ox + terrain_length / 2 - 1.0  # origin sits ~1m into the cell
+    # Aim at the spawn-to-midcourse stretch (x ∈ [origin-1, origin+10]) — on hard
+    # difficulties robots rarely pass midcourse, so centering on the full course
+    # leaves them out of frame.
+    course_center_x = ox + 4.5
 
     pos = (course_center_x, oy + side_offset, oz + cam_height)
     target = (course_center_x, oy, oz + 0.5)

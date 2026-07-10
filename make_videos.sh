@@ -25,7 +25,7 @@ learn_vid() { # $1=exptid(정책) $2=terrain_type $3=라벨
     $PY -u scripts/evaluate.py --task go2 --exptid "$1" --headless --video \
         --terrain_type "$2" --video_row_idxes 3,7 --num_rows 8 --num_cols 1 \
         --num_envs 8 --num_terrain_types 1 --max_steps 600 --no_save 2>&1 | tail -2
-    for f in logs/parkour/$1/eval_videos/cam_*.mp4; do
+    for f in ../logs/parkour/$1/eval_videos/cam_*.mp4; do
         row=$(basename $f | grep -oE "^cam_[0-9]+" | grep -oE "[0-9]+")
         mv "$f" "$OUT/learning/$3_row${row}.mp4"
     done
@@ -38,7 +38,7 @@ bench_vid() { # $1=exptid $2=라벨
         --terrain_type benchmark --video_row_idxes 4 --num_rows 8 --num_cols 5 \
         --num_envs 40 --num_terrain_types 5 --max_steps 600 --no_save 2>&1 | tail -2
     i=0; tasks=(ramp highbox stones stairs poles)
-    for f in $(ls logs/parkour/$1/eval_videos/cam_*.mp4 | sort -t c -k3 -n); do
+    for f in $(ls ../logs/parkour/$1/eval_videos/cam_*.mp4 | sort -t c -k3 -n); do
         mv "$f" "$OUT/benchmark/$2_${tasks[$i]}.mp4"; i=$((i+1))
     done
 }
