@@ -116,8 +116,10 @@ def get_camera_cfg(col_idx, row_idx, camera_name, env_id:int, env_origin=None):
     """
     cam_offset_dict = get_camera_coords(col_idx, row_idx, env_origin)
 
+    # Parent directly under /World: OffsetCfg.pos is relative to the parent frame,
+    # so a world-level parent lets us pass absolute world coordinates.
     cam_cfg = CameraCfg(
-        prim_path=f"/World/envs/env_{env_id}/{camera_name}",
+        prim_path=f"/World/viz_{camera_name}",
         update_period=0.0,
         height=540,
         width=960,
