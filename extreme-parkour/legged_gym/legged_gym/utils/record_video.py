@@ -38,7 +38,9 @@ class MultiCamVideo(gym.Wrapper):
         super().close()
 
 
-def get_camera_coords(col_idx, row_idx, env_origin, terrain_length=18.0, cam_height=6.5, side_offset=-11.5):
+def get_camera_coords(col_idx, row_idx, env_origin, terrain_length=18.0, cam_height=8.5, side_offset=-7.5):
+    # Steeper, closer side view: crosses at most one neighboring 4m column, so tall
+    # obstacles in adjacent courses can't occlude the target course.
     """
     Camera pose for one terrain cell, computed from the cell's actual env origin.
 
