@@ -150,23 +150,15 @@ class SingleEnvCamera(Camera):
     #     self.env_id = env_id
 
     def reset(self, env_ids: Sequence[int] | None = None):
-        env_ids = None # this is the key change
-
+        # This camera exists in exactly one env, so per-env ids from DirectRLEnv._reset_idx
+        # don't apply — always reset fully. The base class handles pose/frame reset for
+        # env_ids=None correctly in Isaac Lab 3.0 (its arrays are warp-backed and reject
+        # tensor indexing, which the old copied-out 2.x logic used).
         if not self._is_initialized:
             raise RuntimeError(
                 "Camera could not be initialized. Please ensure --enable_cameras is used to enable rendering."
             )
-        # reset the timestamps
-        super().reset(env_ids)
-        # resolve None
-        # note: cannot do smart indexing here since we do a for loop over data.
-        if env_ids is None:
-            env_ids = self._ALL_INDICES
-        # reset the data
-        # note: this recomputation is useful if one performs events such as randomizations on the camera poses.
-        self._update_poses(env_ids)
-        # Reset the frame count
-        self._frame[env_ids] = 0
+        super().reset(None)
 
 def evaluate(args):
     faulthandler.enable()
