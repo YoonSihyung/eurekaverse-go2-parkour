@@ -92,7 +92,7 @@ app_launcher = AppLauncher(args)
 simulation_app = app_launcher.app
 
 from legged_gym.envs import *
-from isaaclab.sensors import CameraCfg, Camera
+from isaaclab.sensors import CameraCfg, Camera, TiledCameraCfg, TiledCamera
 import isaaclab.sim as sim_utils
 
 def validate_consecutive_tuples(tuples_list):
@@ -207,11 +207,6 @@ def evaluate(args):
     env_cfg.sim.physics.gpu_max_rigid_patch_count = max(
         env_cfg.sim.physics.gpu_max_rigid_patch_count, 2**21)
 
-    # TiledCamera and plain Camera cannot share a render context (num_envs mismatch),
-    # so when recording videos alongside the robot depth camera, use plain Cameras.
-    if args.video and env_cfg.depth.use_camera:
-        env_cfg.depth.use_tiled_camera = False
-
     # If showing window, allow user to control command velocity to 0
     # This should not be used for headless evaluation since it will affect the results
     if not args.headless:
@@ -279,9 +274,11 @@ def evaluate(args):
             # single-prim viz cameras are rejected — so build ONE batched viz sensor
             # with a camera per env, posed at each env's own terrain-cell 3/4 view,
             # and record only the labeled env indices.
-            viz_cfg = CameraCfg(
+            # TiledCamera like the robot depth cam — the plain batched Camera path
+            # produces black frames (RTX memcpy errors) on this stack.
+            viz_cfg = TiledCameraCfg(
                 prim_path="/World/envs/env_.*/viz_cam",
-                offset=CameraCfg.OffsetCfg(pos=(0.0, 0.0, 50.0), rot=(0.0, 0.0, 0.0, 1.0), convention="world"),
+                offset=TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 50.0), rot=(0.0, 0.0, 0.0, 1.0), convention="world"),
                 data_types=["rgb"],
                 spawn=sim_utils.PinholeCameraCfg(
                     focal_length=24.0, focus_distance=20.0, horizontal_aperture=20.955,
@@ -289,7 +286,7 @@ def evaluate(args):
                 ),
                 width=960, height=540, update_period=0.0,
             )
-            viz = Camera(viz_cfg)
+            viz = TiledCamera(viz_cfg)
             env.scene.sensors["viz_cams"] = viz
             viz._initialize_impl()
             viz._is_initialized = True
