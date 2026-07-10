@@ -207,6 +207,11 @@ def evaluate(args):
     env_cfg.sim.physics.gpu_max_rigid_patch_count = max(
         env_cfg.sim.physics.gpu_max_rigid_patch_count, 2**21)
 
+    # Third-person viz cameras must be created at scene-build time (post-init batched
+    # sensors never render); the env creates them when this flag is set.
+    if args.video and env_cfg.depth.use_camera:
+        env_cfg.viz_cams = True
+
     # If showing window, allow user to control command velocity to 0
     # This should not be used for headless evaluation since it will affect the results
     if not args.headless:
@@ -274,22 +279,9 @@ def evaluate(args):
             # single-prim viz cameras are rejected — so build ONE batched viz sensor
             # with a camera per env, posed at each env's own terrain-cell 3/4 view,
             # and record only the labeled env indices.
-            # TiledCamera like the robot depth cam — the plain batched Camera path
-            # produces black frames (RTX memcpy errors) on this stack.
-            viz_cfg = TiledCameraCfg(
-                prim_path="/World/envs/env_.*/viz_cam",
-                offset=TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 50.0), rot=(0.0, 0.0, 0.0, 1.0), convention="world"),
-                data_types=["rgb"],
-                spawn=sim_utils.PinholeCameraCfg(
-                    focal_length=24.0, focus_distance=20.0, horizontal_aperture=20.955,
-                    clipping_range=(0.1, 1000.0), visible=False,
-                ),
-                width=960, height=540, update_period=0.0,
-            )
-            viz = TiledCamera(viz_cfg)
-            env.scene.sensors["viz_cams"] = viz
-            viz._initialize_impl()
-            viz._is_initialized = True
+            # Sensor was created at scene-build time by the env (env_cfg.viz_cams);
+            # here we only pose each env's camera at its own cell's 3/4 view.
+            viz = env.scene.sensors["viz_cams"]
             origins = env.scene._terrain.env_origins.to(env.device)
             eyes = origins + torch.tensor([10.0, 6.0, 6.0], device=env.device)
             targets = origins + torch.tensor([4.0, 0.0, 0.3], device=env.device)

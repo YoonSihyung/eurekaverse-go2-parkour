@@ -906,6 +906,22 @@ class LeggedRobot(DirectRLEnv):
         )
         self.scene.sensors["depth_cam"] = cam_cls(cam_cfg)
 
+        # Optional third-person viz cameras for video recording (one per env, posed by
+        # the evaluator after reset). Must be created here at scene-build time: batched
+        # camera sensors added after scene initialization never render on this stack.
+        if getattr(self.cfg, "viz_cams", False):
+            viz_cfg = TiledCameraCfg(
+                prim_path="/World/envs/env_.*/viz_cam",
+                offset=TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 50.0), rot=(0.0, 0.0, 0.0, 1.0), convention="world"),
+                data_types=["rgb"],
+                spawn=sim_utils.PinholeCameraCfg(
+                    focal_length=24.0, focus_distance=20.0, horizontal_aperture=20.955,
+                    clipping_range=(0.1, 1000.0), visible=False,
+                ),
+                width=960, height=540, update_period=0.0,
+            )
+            self.scene.sensors["viz_cams"] = TiledCamera(viz_cfg)
+
     def _init_robot(self):
         """ Creates environments:
              1. loads the robot URDF/MJCF asset,
