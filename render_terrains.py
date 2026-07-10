@@ -34,8 +34,8 @@ def main(terrain_file):
     for i, (name, fn) in enumerate(fns):
         ax = axes[i // cols][i % cols]
         try:
-            hf, goals = fn(18.0, 4.0, 0.05, 0.5)  # 셀 18x4m, 해상도 0.05, 난이도 0.5
-            im = ax.imshow(hf.T, origin="lower", cmap="terrain", aspect="auto")
+            hf, goals = fn(18.0, 4.0, 0.05, 1.0)  # 셀 18x4m, 해상도 0.05, 난이도 1.0 (최고)
+            im = ax.imshow(hf.T, origin="lower", cmap="terrain", aspect="auto", vmin=-1.0, vmax=1.0)
             g = np.asarray(goals, dtype=float)
             ax.plot(g[:, 0], g[:, 1], "r.-", markersize=6, linewidth=0.8)
             doc = (fn.__doc__ or "").strip().split("\n")[0][:60]
