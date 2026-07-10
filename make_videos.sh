@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-# 재현 스토리 영상 세트 생성. GPU가 비어 있을 때 실행 (루프와 동시 실행 금지).
-#
-# 산출물: ~/workspace/eurekaverse_lab3/videos/
-#   1) learning/it-N_{pre|post}_row{R}.mp4 — iteration별 지형에서 학습 전(부모 정책) vs 후. 지형이 점점 어려워지는 걸 보여줌
-#   2) benchmark/<정책>_task{T}.mp4        — 같은 벤치마크 코스에서 정책 세대별 발전
+# 루프 완주 후 보충 영상: iteration 11 경계 쌍 + 벤치마크 중간 세대.
+# (경계 1~3 쌍은 videos/curriculum_story/, worst/best 비교는 videos/benchmark_compare/에 이미 있음)
 set -e
 cd "$(dirname "$0")/extreme-parkour/legged_gym/legged_gym"
 
@@ -13,55 +10,52 @@ export OMNI_KIT_ACCEPT_EULA=YES
 PY=~/miniconda3/envs/eureka_lab6/bin/python
 RUN=2026-07-06_12-22-44
 OUT=~/workspace/eurekaverse_lab3/videos
-LOG=~/loop_production.log
-mkdir -p $OUT/learning $OUT/benchmark
+mkdir -p $OUT/curriculum_story $OUT/benchmark_compare $OUT/terrain_progression
+shopt -s nullglob
 
-# 루프 로그에서 iteration N의 승자 run id 추출 (없으면 빈 값)
-winner() { grep -oE "Best run in iteration $1 is run [0-9]+" $LOG ~/loop_production*.log 2>/dev/null | tail -1 | grep -oE "[0-9]+$"; }
+winner() { grep -oE "Best run in iteration $1 is run [0-9]+" ~/loop_production*.log 2>/dev/null | tail -1 | grep -oE "[0-9]+$"; }
 
-# 학습지형 영상: eval(정책, 지형, 라벨) — 난이도 중(row3)/최고(row7) 카메라 2개
-learn_vid() { # $1=exptid(정책) $2=terrain_type $3=라벨
-    echo "=== learning: $3 ($1 on $2) ==="
+# 학습지형 쌍: 정책을 지형 위에 올려 관찰 (row3=중간, row7=최고 난이도 / type 2종)
+rec_terrain() { # $1=policy $2=terrain_type $3=label
+    echo "=== $3 ==="
     $PY -u scripts/evaluate.py --task go2 --exptid "$1" --headless --video \
-        --terrain_type "$2" --video_row_idxes 3,7 --num_rows 8 --num_cols 1 \
-        --num_envs 8 --num_terrain_types 1 --max_steps 600 --no_save 2>&1 | tail -2
+        --terrain_type "$2" --video_row_idxes 3,7 --num_rows 8 --num_cols 2 \
+        --num_envs 16 --num_terrain_types 2 --max_steps 600 --no_save 2>&1 | tail -1
     for f in ../logs/parkour/$1/eval_videos/cam_*.mp4; do
-        row=$(basename $f | grep -oE "^cam_[0-9]+" | grep -oE "[0-9]+")
-        mv "$f" "$OUT/learning/$3_row${row}.mp4"
+        b=$(basename "$f" .mp4); row=${b#cam_}; row=${row%%r_*}; col=${b##*_c}
+        mv "$f" "$OUT/curriculum_story/${3}_row${row}_type${col}.mp4"
     done
 }
 
-# 벤치마크 영상: 태스크 5종(램프/높은박스/디딤돌/계단/장대), 중간 난이도(row4)
-bench_vid() { # $1=exptid $2=라벨
-    echo "=== benchmark: $2 ($1) ==="
+# 벤치마크 세대: 시험 코스 5종 (ramp/highbox/stones/stairs/poles), easy+hard
+rec_bench() { # $1=policy $2=label
+    echo "=== benchmark: $2 ==="
     $PY -u scripts/evaluate.py --task go2 --exptid "$1" --headless --video \
-        --terrain_type benchmark --video_row_idxes 4 --num_rows 8 --num_cols 5 \
-        --num_envs 40 --num_terrain_types 5 --max_steps 600 --no_save 2>&1 | tail -2
-    i=0; tasks=(ramp highbox stones stairs poles)
-    for f in $(ls ../logs/parkour/$1/eval_videos/cam_*.mp4 | sort -t c -k3 -n); do
-        mv "$f" "$OUT/benchmark/$2_${tasks[$i]}.mp4"; i=$((i+1))
+        --terrain_type benchmark --video_row_idxes 1,7 --num_rows 8 --num_cols 5 \
+        --num_envs 40 --num_terrain_types 5 --max_steps 600 --no_save 2>&1 | tail -1
+    tasks=(ramp highbox stones stairs poles)
+    for f in ../logs/parkour/$1/eval_videos/cam_*.mp4; do
+        b=$(basename "$f" .mp4); row=${b#cam_}; row=${row%%r_*}; col=${b##*_c}
+        dl=easy; [ "$row" = "7" ] && dl=hard
+        mv "$f" "$OUT/benchmark_compare/${2}_${tasks[$col]}_${dl}.mp4"
     done
 }
 
-W10=$(winner 10); W11=$(winner 11)
+W11=$(winner 11)
 
-# ── 1. iteration별 pre→post (지형 난이도 진화 + 학습 증거) ──
-learn_vid ${RUN}_0_0 it-1_run-0 "it01_pre";  learn_vid ${RUN}_1_0 it-1_run-0 "it01_post"
-learn_vid ${RUN}_4_0 it-5_run-0 "it05_pre";  learn_vid ${RUN}_5_0 it-5_run-0 "it05_post"
-learn_vid ${RUN}_7_0 it-8_run-3 "it08_pre";  learn_vid ${RUN}_8_3 it-8_run-3 "it08_post"
-if [ -n "$W10" ]; then
-    learn_vid ${RUN}_9_0 it-10_run-$W10 "it10_pre"; learn_vid ${RUN}_10_$W10 it-10_run-$W10 "it10_post"
-fi
+# ── 서사 1 보충: 앵커+폭8 경계 (it10 마스터가 it11 지형에서 고전) ──
 if [ -n "$W11" ]; then
-    learn_vid ${RUN}_10_${W10:-0} it-11_run-$W11 "it11_pre"; learn_vid ${RUN}_11_$W11 it-11_run-$W11 "it11_post"
+    rec_terrain ${RUN}_10_3 it-10_run-3 "4a_it10정책_it10지형_숙달"
+    rec_terrain ${RUN}_10_3 it-11_run-$W11 "4b_it10정책_it11지형_고전"
+    # 지형 진화 스틸에 it-11 추가
+    cd ~/workspace/eurekaverse_lab3
+    $PY render_terrains.py eurekaverse/outputs/run_eurekaverse/$RUN/terrain_iter-11_run-$W11.py > /dev/null 2>&1 \
+        && mv eurekaverse/outputs/run_eurekaverse/$RUN/terrain_iter-11_run-$W11.png $OUT/terrain_progression/iteration_11.png
+    cd extreme-parkour/legged_gym/legged_gym
 fi
 
-# ── 2. 벤치마크 발전사 (같은 시험 코스, 정책 세대별) ──
-bench_vid walk_pretrain "gen0_pretrain"
-bench_vid ${RUN}_1_0    "gen1_it1"
-bench_vid ${RUN}_7_0    "gen2_it7"
-bench_vid ${RUN}_8_3    "gen3_it8"
-[ -n "$W10" ] && bench_vid ${RUN}_10_$W10 "gen4_it10"
-[ -n "$W11" ] && bench_vid ${RUN}_11_$W11 "gen5_it11"
+# ── 서사 2 보충: 벤치마크 중간·최종 세대 (worst 1.05, best 4.48은 이미 있음) ──
+rec_bench ${RUN}_1_0 "mid3.69_it1"
+[ -n "$W11" ] && rec_bench ${RUN}_11_$W11 "final_it11"
 
-echo "완료: $(ls $OUT/learning | wc -l) learning + $(ls $OUT/benchmark | wc -l) benchmark 영상 → $OUT"
+echo "완료. learning=$(ls $OUT/curriculum_story | wc -l), benchmark=$(ls $OUT/benchmark_compare | wc -l)"
