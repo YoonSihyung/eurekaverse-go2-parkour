@@ -5,7 +5,7 @@ defaults:
 
 quadruped_model: "go2"                 # Robot model (our reproduction targets Unitree Go2)
 
-iterations: 12                         # 10 → 12: 앵커+폭8 런 (iteration 10~11, iteration당 ~24h 주의)
+iterations: 5                          # 논문 프로토콜: 5 iterations
 train_iterations: 2000                 # Number of training iterations per generated environment (paper value; fork had 1500)
 eval_steps: 1001                       # Number of evaluation steps per environment (1001 is fairly accurate, 10001 is most accurate)
 num_terrain_types: 10                  # Number of terrains to generate
@@ -24,7 +24,7 @@ initial_query_sample_multiplier: 4     # Multiplier for the number of samples to
 evolution_query_sample_multiplier: 4   # Multiplier for the number of samples to query in later iterations
 max_gpt_queries: 10                    # Maximum number of attempted GPT queries for a single prompt
 
-resume_run: "2026-07-06_12-22-44"      # 런 #1(5 iterations)에 이어붙임; 새 런 시작할 땐 ""로
+resume_run: ""      # 신규 런: walk_pretrain에서 iteration 0부터
 
 hydra:
   job:
