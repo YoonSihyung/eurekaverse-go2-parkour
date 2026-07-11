@@ -116,6 +116,8 @@ def run_subprocess(command: str, log_file: Path | str | None):
             stderr=log_file_handle,
             text=True,
             env=env,
+            start_new_session=True,  # own process group — otherwise terminate_subprocess's
+                                     # killpg hits the parent loop itself (self-SIGINT)
         )
         # Store file handle so caller can close it after process completes
         proc._log_file_handle = log_file_handle
