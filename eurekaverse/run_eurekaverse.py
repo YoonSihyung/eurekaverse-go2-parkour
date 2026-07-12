@@ -258,7 +258,11 @@ def check_response(cfg, gpt_response, it, parallel_run_id, sample_id, terrain_id
     # Feasibility is decided during terrain construction, BEFORE robots spawn, so a tiny
     # env count keeps the graceful-exit phase lightweight. (With the default 6144 envs,
     # N parallel checks running to completion exhausted system RAM/VRAM and froze the machine.)
-    command = command + " --num_envs 16"
+    # Likewise, override the full 10x40 training grid (26M-triangle mesh, ~15GB RAM per
+    # check): a 2x2 grid still runs the terrain function at distinct difficulties and
+    # variations, which is all the check needs. Argparse takes the LAST occurrence, so
+    # these appended flags override the terrain_train values above.
+    command = command + " --num_envs 4 --num_rows 2 --num_cols 2"
     process = run_subprocess(command=command, log_file=log_file)
     success, timeout = wait_subprocess(process, log_file, success_log="Converting heightmap to trimesh", failure_log="Traceback", timeout=10*60)
     if timeout:
