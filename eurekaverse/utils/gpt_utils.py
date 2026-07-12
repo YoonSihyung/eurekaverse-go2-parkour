@@ -50,12 +50,33 @@ def prepare_prompts(cfg):
     evolution_example_message = evolution_example_prompt.replace("<INSERT INITIAL EXAMPLE HERE>", initial_terrain_example)
     evolution_example_message = evolution_example_message.replace("<INSERT EVOLUTION EXAMPLE HERE>", evolution_terrain_example)
 
+OBSTACLE_FAMILIES = [
+    "hurdles (walls to climb over) on mostly flat ground",
+    "staircases going up and down",
+    "narrow balance beams or ledges over pits",
+    "a slalom between pillars or poles on flat ground",
+    "stepping stones separated by gaps",
+    "ramps and inclined surfaces",
+    "raised platforms separated by gaps (jump across)",
+    "a zigzag path of raised walkways requiring turns",
+    "boxes of varying heights to climb on and off",
+    "wide trenches or pits to cross",
+]
+
 def query_gpt_initial(cfg, num_samples=1):
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": initial_example_message}
     ]
-    return query_gpt(cfg, messages, num_samples)
+    # Reasoning models sample near-deterministically, so identical prompts would
+    # yield ~identical courses; assign a rotating obstacle family per sample to
+    # recover the library diversity the paper got from temperature sampling.
+    suffixes = [
+        f"For this course, build this obstacle family: {fam}. "
+        "Follow all the specifications above."
+        for fam in OBSTACLE_FAMILIES
+    ]
+    return query_gpt(cfg, messages, num_samples, per_sample_suffixes=suffixes)
 
 def query_gpt_evolution(cfg, prev_terrain_code, eval_statistics, terrain_stats, all_best_terrain_descriptions, num_samples=1):
     """
@@ -103,18 +124,31 @@ def _one_completion(msgs: List[dict], model: str) -> str:
     return "".join(pieces)
 
 
-def _get_completions_parallel(msgs: List[dict], model: str, k: int) -> List[str]:
+def _get_completions_parallel(msgs: List[dict], model: str, k: int,
+                              per_sample_suffixes: List[str] | None = None) -> List[str]:
     """
     Launch k completions in parallel using a small ThreadPool.
+
+    per_sample_suffixes: optional list of extra user-message strings, cycled by
+    sample index. Reasoning-tier models ignore the temperature parameter and
+    sample near-deterministically, so identical prompts return near-identical
+    courses; explicit per-sample directives restore the sample diversity the
+    original paper obtained from temperature sampling.
     """
+    def build(i):
+        if not per_sample_suffixes:
+            return msgs
+        suffix = per_sample_suffixes[i % len(per_sample_suffixes)]
+        return msgs + [{"role": "user", "content": suffix}]
     max_workers = min(16, k)     # cap threads so we don't oversubscribe
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
-        futures = [pool.submit(_one_completion, msgs, model) for _ in range(k)]
+        futures = [pool.submit(_one_completion, build(i), model) for i in range(k)]
         return [f.result() for f in futures]
 
 
 # ────────────────────────────────────────────────────────────────────────────────
-def query_gpt(cfg, messages: List[dict], num_samples: int = 1
+def query_gpt(cfg, messages: List[dict], num_samples: int = 1,
+              per_sample_suffixes: List[str] | None = None
               ) -> Tuple[List[dict], List[str], List[str], float, float]:
     """
     Query the OpenAI chat model with *num_samples* independent streaming calls.
@@ -150,7 +184,7 @@ def query_gpt(cfg, messages: List[dict], num_samples: int = 1
     # ── 2. Live call to OpenAI ──────────────────────────────────────────────────
     else:
         t0 = time.time()
-        raw_responses = _get_completions_parallel(messages, cfg.gpt_model, num_samples)
+        raw_responses = _get_completions_parallel(messages, cfg.gpt_model, num_samples, per_sample_suffixes)
         elapsed = time.time() - t0
         logging.info(f"Received {num_samples} completions in {elapsed:0.1f}s")
 
