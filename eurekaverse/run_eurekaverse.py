@@ -118,11 +118,17 @@ def run_evaluation(cfg, it, parallel_run_id, exptid, terrain):
             command = command + f" --{k} {v}"
         command += f" --num_terrain_types {cfg.num_terrain_types}"
 
-    process = run_subprocess(command=command, log_file=log_file)
-    success, timeout = wait_subprocess(process, log_file, success_log="Loading model", failure_log="Traceback", timeout=20*60)
-    if timeout:
-        logging.warning(f"Timeout while evaluating for run {parallel_run_id}!")
-        terminate_subprocess(process)
+    # Kit occasionally hangs at startup without output (transient shared-memory
+    # semaphore races, ~once per iteration); one retry saves that population's
+    # round instead of dropping it.
+    for attempt in range(2):
+        process = run_subprocess(command=command, log_file=log_file)
+        success, timeout = wait_subprocess(process, log_file, success_log="Loading model", failure_log="Traceback", timeout=20*60)
+        if timeout:
+            logging.warning(f"Timeout while evaluating for run {parallel_run_id} (attempt {attempt+1}/2)!")
+            terminate_subprocess(process)
+            continue
+        break
     if not success or timeout:
         return None, None
     return process, log_file
