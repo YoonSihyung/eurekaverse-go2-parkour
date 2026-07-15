@@ -24,7 +24,7 @@ initial_query_sample_multiplier: 4     # Multiplier for the number of samples to
 evolution_query_sample_multiplier: 4   # Multiplier for the number of samples to query in later iterations
 max_gpt_queries: 10                    # Maximum number of attempted GPT queries for a single prompt
 
-resume_run: ""      # 신규 런: walk_pretrain에서 iteration 0부터
+resume_run: "2026-07-12_21-17-39"      # 평가 재시도 패치 반영 재개
 
 hydra:
   job:

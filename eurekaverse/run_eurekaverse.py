@@ -485,8 +485,18 @@ def save_run(it):
     with open(f"{output_dir}/eval_testing_stats_per_terrain_it-{it}.pkl", "wb") as f:
         pickle.dump(eval_testing_stats_per_terrain, f)
 
+def _log_signal(signum, frame):
+    import signal as _sig
+    logging.error(f"Received signal {signum} ({_sig.Signals(signum).name}) — sender likely external; stack follows")
+    import traceback
+    logging.error("".join(traceback.format_stack(frame)[-4:]))
+    raise KeyboardInterrupt
+
 @hydra.main(config_path="config", config_name="config", version_base=None)
 def main(cfg):
+    import signal as _sig
+    for _s in (_sig.SIGTERM, _sig.SIGINT, _sig.SIGHUP):
+        _sig.signal(_s, _log_signal)
     global run_id, wandb_id, output_dir, gpt_queries_dir, check_execution_dir, renders_dir
 
     assert sum(cfg.best_run_proportions) == 1, "Best run proportions must sum to 1!"
