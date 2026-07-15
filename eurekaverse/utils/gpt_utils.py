@@ -39,6 +39,8 @@ gpt_pricing = {
      "gpt-5.4": (2.5e-6, 15e-6),
      "gpt-5.4-mini": (0.75e-6, 4.5e-6),
      "gpt-4o-2024-11-20": (2.5e-6, 10e-6),
+     "gpt-4o-2024-08-06": (2.5e-6, 10e-6),
+     "gpt-4o-2024-08-06": (2.5e-6, 10e-6),
      "gpt-4.1-2025-04-14": (2.0e-6, 8.0e-6),
      'gpt-4o-mini-2024-07-18': (0.15e-6, 0.6e-6)
 }
@@ -71,12 +73,16 @@ def query_gpt_initial(cfg, num_samples=1):
     # Reasoning models sample near-deterministically, so identical prompts would
     # yield ~identical courses; assign a rotating obstacle family per sample to
     # recover the library diversity the paper got from temperature sampling.
-    suffixes = [
-        f"For this course, build this obstacle family: {fam}. "
-        "Follow all the specifications above."
-        for fam in OBSTACLE_FAMILIES
-    ]
-    return query_gpt(cfg, messages, num_samples, per_sample_suffixes=suffixes)
+    if str(cfg.gpt_model).startswith("gpt-5"):
+        # Reasoning-tier models ignore temperature; force diversity via rotation.
+        suffixes = [
+            f"For this course, build this obstacle family: {fam}. "
+            "Follow all the specifications above."
+            for fam in OBSTACLE_FAMILIES
+        ]
+        return query_gpt(cfg, messages, num_samples, per_sample_suffixes=suffixes)
+    # Sampling models (gpt-4o line): paper-faithful — temperature sampling provides diversity.
+    return query_gpt(cfg, messages, num_samples)
 
 def query_gpt_evolution(cfg, prev_terrain_code, eval_statistics, terrain_stats, all_best_terrain_descriptions, num_samples=1):
     """

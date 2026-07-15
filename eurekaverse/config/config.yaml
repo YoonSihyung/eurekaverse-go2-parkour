@@ -19,12 +19,12 @@ deterministic_gpu: True                # Deterministically assign training and e
 
 wandb: False                           # Use wandb tracking
 
-gpt_model: "gpt-5.4"                   # mini의 진화 보수화 문제로 풀 모델 승격 (docs/RUN_RESULTS.md)
+gpt_model: "gpt-4o-2024-08-06"         # 논문 충실: 논문이 쓴 모델. temperature 샘플링으로 다양성 native (reasoning 모델의 결정론 회피)
 initial_query_sample_multiplier: 4     # Multiplier for the number of samples to query in first iteration (paper value)
 evolution_query_sample_multiplier: 4   # Multiplier for the number of samples to query in later iterations
 max_gpt_queries: 10                    # Maximum number of attempted GPT queries for a single prompt
 
-resume_run: "2026-07-12_21-17-39"      # 평가 재시도 패치 반영 재개
+resume_run: ""      # 신규 런: gpt-4o + 원본 프롬프트로 iteration 0부터 (붕괴 진단 후 재설계)
 
 hydra:
   job:
