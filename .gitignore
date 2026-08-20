@@ -1,3 +1,5 @@
 extreme-parkour/legged_gym/logs/
 *.log
 __pycache__/
+videos/
+*.pyc

@@ -931,6 +931,26 @@ class LeggedRobot(DirectRLEnv):
             )
             self.scene.sensors["viz_cams"] = TiledCamera(viz_cfg)
 
+        # Optional onboard egocentric RGB camera for first-person video. Attached to the
+        # robot base at the same D435i mount pose as the depth camera (so it sees what the
+        # policy's depth sensor sees) but renders RGB at a higher resolution. Not fed to the
+        # policy — recording only. Uses TiledCamera to match the proven viz_cams RGB path.
+        if getattr(self.cfg, "ego_cam", False):
+            ego_w, ego_h = getattr(self.cfg, "ego_cam_resolution", (640, 360))
+            ego_focal = aperture / (2 * np.tan(np.radians(config.horizontal_fov) / 2))
+            ego_cfg = TiledCameraCfg(
+                prim_path="/World/envs/env_.*/Robot/base/ego_cam",
+                offset=TiledCameraCfg.OffsetCfg(
+                    pos=tuple(config.position["mean"]), rot=quat_xyzw, convention="world"),
+                data_types=["rgb"],
+                spawn=sim_utils.PinholeCameraCfg(
+                    focal_length=ego_focal, horizontal_aperture=aperture,
+                    clipping_range=(0.05, 1000.0),
+                ),
+                width=ego_w, height=ego_h, update_period=0.0,
+            )
+            self.scene.sensors["ego_cam"] = TiledCamera(ego_cfg)
+
     def _init_robot(self):
         """ Creates environments:
              1. loads the robot URDF/MJCF asset,

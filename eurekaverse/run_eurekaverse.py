@@ -76,7 +76,7 @@ def run_training(cfg, it, parallel_run_id, load_exptid):
         log_file.rename(f"{log_file}.old")
     
     gpu = get_freest_gpu() if not cfg.deterministic_gpu else f"cuda:{parallel_run_id % num_gpus}"
-    command = f"{python_prefix} -u {train_script} --task {cfg.quadruped_model} --exptid {run_id}_{it}_{parallel_run_id} --device {gpu} --max_iterations {cfg.train_iterations} --terrain_type it-{it}_run-{parallel_run_id}"
+    command = f"{python_prefix} -u {train_script} --task {cfg.quadruped_model} --exptid {run_id}_{it}_{parallel_run_id} --device {gpu} --seed {cfg.seed} --max_iterations {cfg.train_iterations} --terrain_type it-{it}_run-{parallel_run_id}"
     command = command + f" --resume --load_run {load_exptid}"
     command = command + f" --use_wandb --wandb_id {wandb_id}_{it}_{parallel_run_id} --wandb_group {run_id}" if cfg.wandb else command
     command = command + f" --render_images" if cfg.render_images else command
@@ -98,7 +98,7 @@ def run_evaluation(cfg, it, parallel_run_id, exptid, terrain):
         log_file.rename(f"{log_file}.old")
 
     gpu = get_freest_gpu() if not cfg.deterministic_gpu else f"cuda:{parallel_run_id % num_gpus}"
-    command = f"{python_prefix} -u {eval_script} --task {cfg.quadruped_model} --exptid {exptid} --device {gpu} --headless --max_steps {cfg.eval_steps} --metric_granularity type"
+    command = f"{python_prefix} -u {eval_script} --task {cfg.quadruped_model} --exptid {exptid} --device {gpu} --seed {cfg.seed} --headless --max_steps {cfg.eval_steps} --metric_granularity type"
 
     if terrain == "pre_training" or terrain == "post_training":
         command = command + f" --terrain_type it-{it}_run-{parallel_run_id}"
